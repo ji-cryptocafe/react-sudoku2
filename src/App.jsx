@@ -32,7 +32,7 @@ function App() {
   const [gameState, setGameState] = useState('Loading');
   const [gameMessage, setGameMessage] = useState('');
   const [lockedCells, setLockedCells] = useState([]);
-
+  const [cellTypesBoard, setCellTypesBoard] = useState([]);
   // REMOVE OLD useState DECLARATIONS that are now handled by hooks:
   // const [elapsedTime, setElapsedTime] = useState(0); // REMOVED
   // const timerIntervalIdRef = useRef(null); // REMOVED
@@ -74,6 +74,12 @@ function App() {
     setInitialCluesBoard(puzzle.initialBoard);
     setSolutionBoard(puzzle.solution);
     setUserBoard(deepCopy(puzzle.initialBoard));
+
+    // Initialize cellTypesBoard
+  const newCellTypesBoard = Array(gridSize)
+    .fill(null)
+    .map(() => Array(gridSize).fill('standard')); // All standard for now
+    setCellTypesBoard(newCellTypesBoard); // SET THE NEW STATE
 
     setLockedCells([]);
     setSelectedCell(null);
@@ -417,6 +423,7 @@ function App() {
                 initialCluesBoard={initialCluesBoard}
                 userBoard={userBoard}
                 solutionBoard={solutionBoard}
+                cellTypesBoard={cellTypesBoard} // NEW PROP
                 selectedCell={selectedCell}
                 hoveredCell={hoveredCell}
                 setHoveredCell={setHoveredCell}

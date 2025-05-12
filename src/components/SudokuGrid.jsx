@@ -1,12 +1,14 @@
 // src/components/SudokuGrid.jsx
 import React from 'react';
-import Cell from './Cell';
+// import Cell from './Cell';
+import { cellComponentMap, DefaultCellComponent } from './cellTypes/cellComponentMap'; // NEW IMPORT
 
 function SudokuGrid({
   gridSize,
   initialCluesBoard,
   userBoard,
   solutionBoard,
+  cellTypesBoard, // NEW PROP
   selectedCell,
   hoveredCell,
   setHoveredCell,
@@ -18,16 +20,13 @@ function SudokuGrid({
 }) {
   // Robust check: If boards aren't ready, don't attempt to render cells
   if (
-    !initialCluesBoard ||
-    initialCluesBoard.length !== gridSize ||
-    !userBoard ||
-    userBoard.length !== gridSize ||
-    !solutionBoard ||
-    solutionBoard.length !== gridSize
+    !initialCluesBoard || initialCluesBoard.length !== gridSize ||
+    !userBoard || userBoard.length !== gridSize ||
+    !solutionBoard || solutionBoard.length !== gridSize ||
+    !cellTypesBoard || cellTypesBoard.length !== gridSize // ADD CHECK FOR cellTypesBoard
   ) {
-    // console.warn("SudokuGrid: Boards not ready or incorrect size.", {initialCluesBoard, userBoard, solutionBoard, gridSize});
-    return <p>Initializing grid...</p>; // Or null, or a more specific loading indicator
-  }
+    return <p>Initializing grid data...</p>;
+  } 
 
   const subgridSize = Math.sqrt(gridSize);
   const cells = [];
@@ -46,8 +45,12 @@ function SudokuGrid({
       // handle it gracefully or throw a more specific error.
       // For now, we assume the top-level check in SudokuGrid handles this.
 
+      // Determine which component to render for this cell
+      const cellType = (cellTypesBoard[r] && cellTypesBoard[r][c]) ? cellTypesBoard[r][c] : 'standard';
+      const CellComponentToRender = cellComponentMap[cellType] || DefaultCellComponent;
+
       cells.push(
-        <Cell
+        <CellComponentToRender // DYNAMICALLY RENDER THE COMPONENT
           key={`${r}-${c}`}
           row={r}
           col={c}
@@ -56,9 +59,9 @@ function SudokuGrid({
           solutionValue={solutionVal}
           isSelected={selectedCell?.row === r && selectedCell?.col === c}
           isHovered={hoveredCell?.row === r && hoveredCell?.col === c}
-          isRowHovered={hoveredCell?.row === r}
-          isColHovered={hoveredCell?.col === c}
-          isSubgridHovered={
+          isRowHovered={hoveredCell?.row === r} // Pass these down
+          isColHovered={hoveredCell?.col === c} // Pass these down
+          isSubgridHovered={ // Pass these down
             hoveredCell &&
             Math.floor(r / subgridSize) ===
               Math.floor(hoveredCell.row / subgridSize) &&
@@ -67,13 +70,14 @@ function SudokuGrid({
           }
           onClick={() => onCellClick(r, c)}
           onMouseEnter={() => setHoveredCell({ row: r, col: c })}
-          onCellContextMenu={onCellContextMenu} // Pass down the handler
+          onCellContextMenu={onCellContextMenu} // Pass down directly
           gridSize={gridSize}
           gameState={gameState}
           isLocked={lockedCells.some(
             (cell) => cell.row === r && cell.col === c
           )}
           onToggleLock={() => onToggleLock(r, c)}
+          // Add any other props StandardCell (previously Cell) was expecting
         />
       );
     }

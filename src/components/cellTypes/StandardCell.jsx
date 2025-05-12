@@ -1,9 +1,10 @@
-// src/components/Cell.jsx
+// src/components/cellTypes/StandardCell.jsx
 import React from 'react';
-import { getDisplayValue } from '../logic/utils';
-import { EMPTY_CELL_VALUE } from '../logic/constants';
+import { getDisplayValue } from '../../logic/utils'; // Adjusted path
+import { EMPTY_CELL_VALUE } from '../../logic/constants'; // Adjusted path
 
-function Cell({
+// Renamed function from Cell to StandardCell
+function StandardCell({
   row,
   col,
   initialValue,
@@ -25,7 +26,7 @@ function Cell({
   const subgridSize = Math.sqrt(gridSize);
   const isClue = initialValue !== EMPTY_CELL_VALUE;
   let displayContent = '';
-  let mainClass = 'cell';
+  let mainClass = 'cell'; // Keep 'cell' class for base styling
   let valueClass = '';
   let smallHintContent = '';
 
@@ -55,26 +56,22 @@ function Cell({
     mainClass += ' locked';
   }
 
-  // Add classes for subgrid borders
   if ((col + 1) % subgridSize === 0 && col + 1 !== gridSize) {
     mainClass += ' subgrid-border-right';
   }
   if ((row + 1) % subgridSize === 0 && row + 1 !== gridSize) {
     mainClass += ' subgrid-border-bottom';
   }
-  // Add classes for outer borders if they are handled by the grid container's border
-  // or if cells at edges need special treatment (e.g., no individual top/left border)
   if (row === 0) {
-    mainClass += ' first-row-cell'; // Example if you want to target them specifically
+    mainClass += ' first-row-cell';
   }
   if (col === 0) {
-    mainClass += ' first-col-cell'; // Example
+    mainClass += ' first-col-cell';
   }
 
   const cellStyle = {
-    // borderRight and borderBottom removed from here
-    borderTop: row === 0 ? 'none' : undefined, // Keep if outer borders are handled by grid container
-    borderLeft: col === 0 ? 'none' : undefined, // Keep if outer borders are handled by grid container
+    borderTop: row === 0 ? 'none' : undefined,
+    borderLeft: col === 0 ? 'none' : undefined,
   };
 
   const handleLockClick = (event) => {
@@ -138,4 +135,4 @@ function Cell({
   );
 }
 
-export default Cell;
+export default StandardCell; // Update export name
