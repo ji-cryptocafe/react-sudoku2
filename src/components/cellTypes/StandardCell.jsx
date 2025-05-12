@@ -1,10 +1,9 @@
-// src/components/cellTypes/StandardCell.jsx
+// src/components/Cell.jsx
 import React from 'react';
-import { getDisplayValue } from '../../logic/utils'; // Adjusted path
-import { EMPTY_CELL_VALUE } from '../../logic/constants'; // Adjusted path
+import { getDisplayValue } from '../../logic/utils';
+import { EMPTY_CELL_VALUE } from '../../logic/constants';
 
-// Renamed function from Cell to StandardCell
-function StandardCell({
+function Cell({
   row,
   col,
   initialValue,
@@ -26,7 +25,7 @@ function StandardCell({
   const subgridSize = Math.sqrt(gridSize);
   const isClue = initialValue !== EMPTY_CELL_VALUE;
   let displayContent = '';
-  let mainClass = 'cell'; // Keep 'cell' class for base styling
+  let mainClass = 'cell';
   let valueClass = '';
   let smallHintContent = '';
 
@@ -56,22 +55,26 @@ function StandardCell({
     mainClass += ' locked';
   }
 
+  // Add classes for subgrid borders
   if ((col + 1) % subgridSize === 0 && col + 1 !== gridSize) {
     mainClass += ' subgrid-border-right';
   }
   if ((row + 1) % subgridSize === 0 && row + 1 !== gridSize) {
     mainClass += ' subgrid-border-bottom';
   }
+  // Add classes for outer borders if they are handled by the grid container's border
+  // or if cells at edges need special treatment (e.g., no individual top/left border)
   if (row === 0) {
-    mainClass += ' first-row-cell';
+    mainClass += ' first-row-cell'; // Example if you want to target them specifically
   }
   if (col === 0) {
-    mainClass += ' first-col-cell';
+    mainClass += ' first-col-cell'; // Example
   }
 
   const cellStyle = {
-    borderTop: row === 0 ? 'none' : undefined,
-    borderLeft: col === 0 ? 'none' : undefined,
+    // borderRight and borderBottom removed from here
+    borderTop: row === 0 ? 'none' : undefined, // Keep if outer borders are handled by grid container
+    borderLeft: col === 0 ? 'none' : undefined, // Keep if outer borders are handled by grid container
   };
 
   const handleLockClick = (event) => {
@@ -135,4 +138,4 @@ function StandardCell({
   );
 }
 
-export default StandardCell; // Update export name
+export default Cell;

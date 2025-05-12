@@ -1,0 +1,136 @@
+/* src/components/cellTypes/FlippingCell.css */
+.flipping-cell-outer-wrapper {
+    /* This div is now just for grid positioning and context menu/click handling.
+       It should NOT have visible borders itself if the faces handle it. */
+    width: 100%;
+    height: 100%;
+    display: flex; /* Helps center the scene if needed, though scene is 100% */
+    justify-content: center;
+    align-items: center;
+    /* Keep cursor style here for interactivity */
+    /* Background for clue/hover/selection will be on the faces or a wrapper inside the face */
+  }
+  
+  .flipping-cell-scene {
+    width: 100%;
+    height: 100%;
+    perspective: 600px; /* Increased for a slightly less intense flip on a small tile */
+  }
+  
+  .flipping-cell-flipper {
+    width: 100%;
+    height: 100%;
+    transition: transform 0.2s;
+    transform-style: preserve-3d;
+    position: relative; /* Important for face positioning */
+  }
+  
+  .flipping-cell-face {
+    position: absolute;
+    width: 100%;
+    height: 100%;
+    display: flex;
+    flex-direction: column; /* To stack value and small-hint */
+    justify-content: center;
+    align-items: center;
+    backface-visibility: hidden;
+    -webkit-backface-visibility: hidden;
+    box-sizing: border-box;
+  
+    /* THE CELL/TILE STYLES ARE NOW HERE: */
+    border: 1px solid #ddd; /* Default border for the tile face */
+    /* background-color: #fff; Default background for faces */
+    /* transition for background color changes (hover, selected) should be here if not on wrapper */
+    transition: background-color 0.1s ease-in-out;
+  }
+  
+  /* Specific face rotations */
+  .flipping-cell-face-front {
+    /* transform: rotateX(0deg); // default */
+  }
+  
+  .flipping-cell-face-back {
+    transform: rotateX(180deg);
+  }
+  
+  /* Styling for content WITHIN the face (numbers, hints) */
+  .flipping-cell-face .value-container {
+    /* This container helps if you need to style value and hint separately from face bg */
+    position: relative; /* For positioning small-hint */
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+  }
+  
+  
+  .flipping-cell-face .value {
+    /* Font size will be set by inline style from the component */
+    /* Color will also be set by the component for user-filled, incorrect, hint */
+    line-height: 1; /* Adjust if necessary */
+  }
+  
+  .flipping-cell-face .small-hint {
+    font-weight: bold;
+    color: #28a745;
+    position: absolute;
+    top: 1px;   /* Adjust positioning based on new structure */
+    right: 2px; /* Adjust positioning */
+    line-height: 1;
+    /* Font-size for small-hint also set inline */
+  }
+  
+  /* Subgrid borders - applied to the faces */
+  .flipping-cell-face.subgrid-border-right-face {
+    border-right: 2px solid #555 !important;
+  }
+  .flipping-cell-face.subgrid-border-bottom-face {
+    border-bottom: 2px solid #555 !important;
+  }
+  
+  /* No top/left border for cells on the edge of the main grid,
+     relying on SudokuGrid's main border */
+  .flipping-cell-face.first-row-face {
+    border-top: none !important;
+  }
+  .flipping-cell-face.first-col-face {
+    border-left: none !important;
+  }
+  
+  /* Styling for different cell states (clue, selected, hovered, locked)
+     These will be applied as classes to the .flipping-cell-face elements */
+  
+  .flipping-cell-face.clue-face {
+    font-weight: bold; /* For the number inside */
+    color: #333;      /* For the number inside */
+    background-color: #f0f0f0;
+    /* cursor: default; // Cursor is on the outer wrapper */
+  }
+  
+  .flipping-cell-face.selected-face:not(.clue-face) {
+    /* Using outline for selected state on the face to avoid layout shifts with border */
+    outline: 2px solid #007bff;
+    outline-offset: -2px; /* Inset the outline */
+    z-index: 10; /* Ensure selected outline is on top */
+  }
+  
+  .flipping-cell-face.locked-face {
+    box-shadow: inset 0 0 0 2px #0056b3; /* Inset shadow for locked state */
+  }
+  
+  /* Hover and highlight states could also apply to faces or the outer wrapper.
+     Applying to faces might be visually more consistent with the flip. */
+  .flipping-cell-outer-wrapper.highlight-row .flipping-cell-face:not(.hovered-face),
+  .flipping-cell-outer-wrapper.highlight-col .flipping-cell-face:not(.hovered-face),
+  .flipping-cell-outer-wrapper.highlight-subgrid .flipping-cell-face:not(.hovered-face) {
+    background-color: rgba(151, 192, 255, 0.3); /* Ensure this doesn't override clue bg */
+  }
+  .flipping-cell-outer-wrapper.hovered-cell .flipping-cell-face {
+    background-color: rgba(104, 195, 255, 0.6); /* Ensure this doesn't override clue bg */
+    z-index: 5;
+  }
+  
+  /* Special handling for hovered clues if their background shouldn't change as much */
+  .flipping-cell-outer-wrapper.hovered-cell .flipping-cell-face.clue-face {
+    background-color: #e0e0e0; /* Slightly darker clue background on hover */
+  }

@@ -1,13 +1,10 @@
 // src/components/cellTypes/cellComponentMap.js
 import StandardCell from './StandardCell';
-// Import other cell types here in the future
-// e.g., import ImageCell from './ImageCell';
+import FlippingCell from './FlippingCell'; // NEW IMPORT
 
 export const cellComponentMap = {
-  standard: StandardCell,
-  // image: ImageCell, // Example for the future
-  // Add more cell types here
+  standard: StandardCell, // Keep if you want to switch back easily
+  flipping: FlippingCell, // NEW TYPE
 };
 
-// You might also want a default component if a type is not found
-export const DefaultCellComponent = StandardCell;
+export const DefaultCellComponent = StandardCell; // MAKE FLIPPING THE DEFAULT

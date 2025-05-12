@@ -407,15 +407,27 @@ function App() {
       <div
         id="main-content-wrapper"
         className={`${isNewGameModalOpen ? 'blurred' : ''}`}
-        // Removed problematic comment from here
       >
-        <TimerDisplay time={elapsedTime} />
+        {/* NEW: Top bar for controls and timer */}
+        <div id="top-bar">
+          <div id="top-bar-controls"> {/* Wrapper for buttons */}
+            <Controls
+              onNewGame={handleNewGameRequest}
+              onCheckSolution={handleCheckSolution}
+              isGamePlaying={gameState === 'Playing'}
+            />
+          </div>
+          <TimerDisplay time={elapsedTime} />
+        </div> {/* End of top-bar */}
+
         <div id="game-area">
           <div id="canvas-container">
+            {/* ... SudokuGrid rendering logic ... */}
             {gameState === 'Loading' ||
             initialCluesBoard.length === 0 ||
             userBoard.length === 0 ||
-            solutionBoard.length === 0 ? (
+            solutionBoard.length === 0 ||
+            !cellTypesBoard || cellTypesBoard.length !== gridSize ? (
               <p>Loading puzzle...</p>
             ) : (
               <SudokuGrid
@@ -423,7 +435,7 @@ function App() {
                 initialCluesBoard={initialCluesBoard}
                 userBoard={userBoard}
                 solutionBoard={solutionBoard}
-                cellTypesBoard={cellTypesBoard} // NEW PROP
+                cellTypesBoard={cellTypesBoard}
                 selectedCell={selectedCell}
                 hoveredCell={hoveredCell}
                 setHoveredCell={setHoveredCell}
@@ -437,6 +449,9 @@ function App() {
           </div>
           <MessageDisplay gameState={gameState} message={gameMessage} />
         </div>
+
+        {/* REMOVED: Old bottom-controls div */}
+        {/*
         <div id="bottom-controls">
           <Controls
             onNewGame={handleNewGameRequest}
@@ -444,9 +459,12 @@ function App() {
             isGamePlaying={gameState === 'Playing'}
           />
         </div>
+        */}
+
         {gameState === 'Won' && <ParticleEffect />}
       </div>
 
+      {/* ... Modals ... */}
       {isNewGameModalOpen && (
         <NewGameModal
           isOpen={isNewGameModalOpen}

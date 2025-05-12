@@ -8,7 +8,7 @@ body {
   background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
   font-family: 'Helvetica Neue', Arial, sans-serif;
   margin: 0;
-  padding: 20px;
+  padding: 20px 0;
   box-sizing: border-box;
 }
 
@@ -18,8 +18,78 @@ body {
   align-items: center;
   width: 100%;
   max-width: 1200px; /* Max width for the whole app */
-  gap: 20px; /* Space between major sections */
+  gap: 15px; /* Space between major sections */
   position: relative; /* For stacking context of modal */
+}
+
+/* NEW: Top Bar Styling */
+#top-bar {
+  display: flex;
+  justify-content: space-between; /* Pushes controls left, timer right */
+  align-items: center;
+  width: 100%;
+  max-width: 454px; /* Match SudokuGrid width (450px + 2px border left + 2px border right) */
+                     /* Or 500px if #canvas-container is the target width */
+                     /* Adjust this based on the exact width of your .sudoku-grid */
+  padding: 0; /* No padding for the bar itself, children will handle spacing */
+  margin-bottom: 15px; /* Space between top-bar and game-area */
+  box-sizing: border-box;
+}
+
+#top-bar-controls {
+  display: flex;
+  gap: 10px; /* Space between the New Game and Check Solution buttons */
+  flex-grow: 1; /* Allows this container to take up space */
+}
+
+#top-bar .glossy-button { /* Targets buttons specifically within the top bar */
+  padding: 10px 15px; /* Adjust padding as needed for visual balance */
+  font-size: 0.9em;   /* Slightly smaller font if needed */
+  flex-grow: 1;       /* Make buttons share the space within #top-bar-controls */
+  min-width: 0;       /* Allow buttons to shrink if necessary */
+  text-align: center;
+  /* Remove fixed min-width if it was previously set for glossy-button */
+}
+
+.timer-display { /* Timer specific adjustments */
+  font-size: 0.9em; /* Make timer font slightly larger or as desired */
+  font-weight: 400;
+  color: #333;
+  padding: 10px 15px; /* Match button padding for alignment */
+  background-color: rgba(255, 255, 255, 0.9);
+  border-radius: 20px; /* Match button radius for consistency */
+  box-shadow: 0 3px 6px rgba(0, 0, 0, 0.08);
+  margin-left: 10px; /* Space between last button and timer */
+  white-space: nowrap; /* Prevent timer text from wrapping */
+  flex-shrink: 0; /* Prevent timer from shrinking if buttons need more space */
+}
+
+
+/* Game Area (Sudoku Grid + Message) */
+#game-area {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 15px;
+  background-color: rgba(255, 255, 255, 0.75);
+  padding: 20px; /* Padding around the grid */
+  border-radius: 15px;
+  box-shadow: 0 8px 25px rgba(0, 0, 0, 0.1);
+  width: 100%;
+  /* max-width of game-area should be wider than the grid if it has padding */
+  /* e.g., if grid is 454px, and padding is 20px left/right, game-area max-width is 494px */
+  max-width: calc(454px + 40px); /* 454px for grid + 20px padding left/right */
+  box-sizing: border-box;
+}
+
+#canvas-container {
+  position: relative;
+  width: 450px;  /* Fixed width for the canvas that SudokuGrid is in */
+  height: 450px; /* Fixed height */
+  /* max-width: 100%; Ensure it fits within game-area padding if game-area is responsive */
+  display: flex;
+  justify-content: center;
+  align-items: center;
 }
 
 /* Main Content Wrapper for Blur Effect */
@@ -39,12 +109,12 @@ body {
 
 /* Timer Display */
 .timer-display {
-  font-size: 22px;
+  font-size: 0.95em;
   font-weight: 600;
   color: #333;
   padding: 10px 18px;
   background-color: rgba(255, 255, 255, 0.9);
-  border-radius: 10px;
+  border-radius: 20px;
   box-shadow: 0 3px 6px rgba(0, 0, 0, 0.08);
   margin-top: 0; /* Removed specific margin, gap handles it */
 }
@@ -118,31 +188,13 @@ body {
   color: transparent;
 }
 
-/* Bottom Controls */
-#bottom-controls {
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  gap: 20px;
-  width: 100%;
-  max-width: 500px; /* Align with game area if desired */
-  padding: 10px 0;
-}
-
-#bottom-controls .glossy-button {
-  padding: 12px 28px;
-  font-size: 1em;
-  min-width: 150px; /* Give buttons a decent minimum width */
-  text-align: center;
-}
-
 /* Existing Glossy Styles (ensure they are present and potentially tweak if needed) */
 .glossy-button,
 .glossy-select {
-  padding: 10px 18px;
+  padding: 10px 18px; /* Default padding */
   border: 1px solid rgba(0, 0, 0, 0.15);
-  border-radius: 20px; /* Rounded corners */
-  font-size: 14px;
+  border-radius: 20px; /* Slightly less rounded for a more modern feel? Or keep 20px */
+  font-size: 14px;    /* Default font size */
   font-weight: 500;
   color: #333;
   cursor: pointer;
@@ -265,13 +317,12 @@ body {
 .cell.highlight-row,
 .cell.highlight-col,
 .cell.highlight-subgrid {
-  background-color: rgba(151, 192, 255, 0.3);
+  /* background-color: rgba(151, 192, 255, 0.3); */ /* COMMENT OUT or REMOVE if FlippingCell.css handles this */
 }
 .cell.hovered-cell {
-  background-color: rgba(104, 195, 255, 0.6);
-  z-index: 5;
-}
-
+  /* background-color: rgba(104, 195, 255, 0.6); */ /* COMMENT OUT or REMOVE */
+  /* z-index: 5; */ /* FlippingCell.css handles its own z-index for faces if needed */
+} 
 /* Responsive Adjustments */
 @media (max-width: 768px) {
   #game-area {
@@ -298,9 +349,14 @@ body {
   .app-container {
     gap: 15px;
   }
+  #top-bar .glossy-button {
+    font-size: 0.8em;
+    padding: 8px 10px;
+  }
   .timer-display {
-    font-size: 18px;
-    padding: 8px 12px;
+    font-size: 1em;
+    padding: 8px 10px;
+    border-radius: 10px;
   }
   #game-area {
     padding: 10px;
