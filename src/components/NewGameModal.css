@@ -1,0 +1,89 @@
+.modal-backdrop {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-color: rgba(0, 0, 0, 0.65); /* Semi-transparent black */
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 2000; /* Ensure it's on top of other content */
+}
+
+.modal-content {
+  background-color: #ffffff;
+  padding: 25px 35px;
+  border-radius: 12px;
+  box-shadow: 0 8px 25px rgba(0, 0, 0, 0.2);
+  color: #333; /* Text color for modal content */
+  width: auto;
+  min-width: 320px;
+  max-width: 90%;
+  text-align: center;
+}
+
+.modal-content h2 {
+  margin-top: 0;
+  margin-bottom: 30px;
+  font-size: 1.9em;
+  color: #3a3a3a;
+}
+
+.modal-controls {
+  display: grid;
+  grid-template-columns: auto 1fr; /* Label | Select */
+  gap: 18px 12px; /* row-gap column-gap */
+  align-items: center;
+  margin-bottom: 35px;
+}
+
+.modal-controls label {
+  font-weight: 500;
+  text-align: right;
+  font-size: 1em;
+  color: #555;
+}
+
+.modal-controls .glossy-select {
+  width: 100%;
+  box-sizing: border-box;
+  padding: 10px 15px; /* Adjust padding if needed */
+}
+
+.modal-actions {
+  display: flex;
+  justify-content: space-between; /* Pushes GO to left, Cancel to right */
+  gap: 15px;
+}
+
+.modal-actions .glossy-button {
+  flex-grow: 1; /* Make buttons share space if more than two or for centering */
+  padding: 12px 20px;
+}
+
+.modal-actions .glossy-button.go {
+  background: linear-gradient(
+    to bottom,
+    #6dd5ed 0%,
+    #2193b0 100%
+  ); /* Blueish gradient */
+  color: white;
+  border-color: #1c7b92;
+}
+.modal-actions .glossy-button.go:hover {
+  background: linear-gradient(to bottom, #5ac4dd 0%, #1e839f 100%);
+}
+
+.modal-actions .glossy-button.cancel {
+  background: linear-gradient(
+    to bottom,
+    #f8f9fa 0%,
+    #e9ecef 100%
+  ); /* Lighter gray */
+  color: #495057;
+  border-color: #ced4da;
+}
+.modal-actions .glossy-button.cancel:hover {
+  background: linear-gradient(to bottom, #e9ecef 0%, #dee2e6 100%);
+}
