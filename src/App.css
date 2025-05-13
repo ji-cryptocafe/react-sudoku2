@@ -317,11 +317,15 @@ body {
 .cell.highlight-row,
 .cell.highlight-col,
 .cell.highlight-subgrid {
-  /* background-color: rgba(151, 192, 255, 0.3); */ /* COMMENT OUT or REMOVE if FlippingCell.css handles this */
+  /* background-color: rgba(151, 192, 255, 0.3); */ 
+  /* COMMENT OUT or REMOVE if FlippingCell.css handles this */
+  transform: scale(1.1); /* NEW: Scale up highlighted cells */
 }
 .cell.hovered-cell {
   /* background-color: rgba(104, 195, 255, 0.6); */ /* COMMENT OUT or REMOVE */
-  /* z-index: 5; */ /* FlippingCell.css handles its own z-index for faces if needed */
+  /* z-index: 5; */ 
+  /* FlippingCell.css handles its own z-index for faces if needed */
+  transform: scale(1.15); /* NEW: Scale up hovered cell even more */
 } 
 /* Responsive Adjustments */
 @media (max-width: 768px) {

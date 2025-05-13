@@ -1,136 +1,174 @@
 /* src/components/cellTypes/FlippingCell.css */
+
+/* Basic structure for the flipping mechanism */
 .flipping-cell-outer-wrapper {
-    /* This div is now just for grid positioning and context menu/click handling.
-       It should NOT have visible borders itself if the faces handle it. */
-    width: 100%;
-    height: 100%;
-    display: flex; /* Helps center the scene if needed, though scene is 100% */
-    justify-content: center;
-    align-items: center;
-    /* Keep cursor style here for interactivity */
-    /* Background for clue/hover/selection will be on the faces or a wrapper inside the face */
-  }
-  
-  .flipping-cell-scene {
-    width: 100%;
-    height: 100%;
-    perspective: 600px; /* Increased for a slightly less intense flip on a small tile */
-  }
-  
-  .flipping-cell-flipper {
-    width: 100%;
-    height: 100%;
-    transition: transform 0.2s;
-    transform-style: preserve-3d;
-    position: relative; /* Important for face positioning */
-  }
-  
-  .flipping-cell-face {
-    position: absolute;
-    width: 100%;
-    height: 100%;
-    display: flex;
-    flex-direction: column; /* To stack value and small-hint */
-    justify-content: center;
-    align-items: center;
-    backface-visibility: hidden;
-    -webkit-backface-visibility: hidden;
-    box-sizing: border-box;
-  
-    /* THE CELL/TILE STYLES ARE NOW HERE: */
-    border: 1px solid #ddd; /* Default border for the tile face */
-    /* background-color: #fff; Default background for faces */
-    /* transition for background color changes (hover, selected) should be here if not on wrapper */
-    transition: background-color 0.1s ease-in-out;
-  }
-  
-  /* Specific face rotations */
-  .flipping-cell-face-front {
-    /* transform: rotateX(0deg); // default */
-  }
-  
-  .flipping-cell-face-back {
-    transform: rotateX(180deg);
-  }
-  
-  /* Styling for content WITHIN the face (numbers, hints) */
-  .flipping-cell-face .value-container {
-    /* This container helps if you need to style value and hint separately from face bg */
-    position: relative; /* For positioning small-hint */
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-  }
-  
-  
-  .flipping-cell-face .value {
-    /* Font size will be set by inline style from the component */
-    /* Color will also be set by the component for user-filled, incorrect, hint */
-    line-height: 1; /* Adjust if necessary */
-  }
-  
-  .flipping-cell-face .small-hint {
-    font-weight: bold;
-    color: #28a745;
-    position: absolute;
-    top: 1px;   /* Adjust positioning based on new structure */
-    right: 2px; /* Adjust positioning */
-    line-height: 1;
-    /* Font-size for small-hint also set inline */
-  }
-  
-  /* Subgrid borders - applied to the faces */
-  .flipping-cell-face.subgrid-border-right-face {
-    border-right: 2px solid #555 !important;
-  }
-  .flipping-cell-face.subgrid-border-bottom-face {
-    border-bottom: 2px solid #555 !important;
-  }
-  
-  /* No top/left border for cells on the edge of the main grid,
-     relying on SudokuGrid's main border */
-  .flipping-cell-face.first-row-face {
-    border-top: none !important;
-  }
-  .flipping-cell-face.first-col-face {
-    border-left: none !important;
-  }
-  
-  /* Styling for different cell states (clue, selected, hovered, locked)
-     These will be applied as classes to the .flipping-cell-face elements */
-  
-  .flipping-cell-face.clue-face {
-    font-weight: bold; /* For the number inside */
-    color: #333;      /* For the number inside */
-    background-color: #f0f0f0;
-    /* cursor: default; // Cursor is on the outer wrapper */
-  }
-  
-  .flipping-cell-face.selected-face:not(.clue-face) {
-    /* Using outline for selected state on the face to avoid layout shifts with border */
-    outline: 2px solid #007bff;
-    outline-offset: -2px; /* Inset the outline */
-    z-index: 10; /* Ensure selected outline is on top */
-  }
-  
-  .flipping-cell-face.locked-face {
-    box-shadow: inset 0 0 0 2px #0056b3; /* Inset shadow for locked state */
-  }
-  
-  /* Hover and highlight states could also apply to faces or the outer wrapper.
-     Applying to faces might be visually more consistent with the flip. */
-  .flipping-cell-outer-wrapper.highlight-row .flipping-cell-face:not(.hovered-face),
-  .flipping-cell-outer-wrapper.highlight-col .flipping-cell-face:not(.hovered-face),
-  .flipping-cell-outer-wrapper.highlight-subgrid .flipping-cell-face:not(.hovered-face) {
-    background-color: rgba(151, 192, 255, 0.3); /* Ensure this doesn't override clue bg */
-  }
-  .flipping-cell-outer-wrapper.hovered-cell .flipping-cell-face {
-    background-color: rgba(104, 195, 255, 0.6); /* Ensure this doesn't override clue bg */
-    z-index: 5;
-  }
-  
-  /* Special handling for hovered clues if their background shouldn't change as much */
-  .flipping-cell-outer-wrapper.hovered-cell .flipping-cell-face.clue-face {
-    background-color: #e0e0e0; /* Slightly darker clue background on hover */
-  }
+  width: 100%;
+  height: 100%;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.flipping-cell-scene {
+  width: 100%;
+  height: 100%;
+  perspective: 600px;
+}
+
+.flipping-cell-flipper {
+  width: 100%;
+  height: 100%;
+  transition: transform 0.6s; /* Match JS animation duration */
+  transform-style: preserve-3d;
+  position: relative;
+}
+
+/* Styles for each face of the flipping tile (this IS the tile) */
+.flipping-cell-face {
+  position: absolute;
+  width: 100%;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  backface-visibility: hidden;
+  -webkit-backface-visibility: hidden;
+  box-sizing: border-box;
+  border: 1px solid #ddd; /* Default tile border */
+  transition: background-color 0.1s ease-in-out, border-color 0.1s ease-in-out, border-width 0.1s ease-in-out; /* Animate border changes */
+}
+
+.flipping-cell-face-front {
+  /* transform: rotateX(0deg); // default */
+}
+.flipping-cell-face-back {
+  transform: rotateX(180deg);
+}
+
+/* Content (number/hint) within the tile face */
+.flipping-cell-face .value-container {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+}
+.flipping-cell-face .value {
+  line-height: 1;
+}
+.flipping-cell-face .small-hint {
+  font-weight: bold; 
+  color: #28a745;
+  position: absolute;
+  top: -12px;
+  right: -12px;
+  line-height: 1;
+}
+
+/* Standard grid lines: subgrid dividers and outer edge adjustments */
+.flipping-cell-face.subgrid-border-right-face {
+  border-right-width: 2px !important; /* Thicker */
+  border-right-color: #555 !important; /* Subgrid line color */
+}
+.flipping-cell-face.subgrid-border-bottom-face {
+  border-bottom-width: 2px !important; /* Thicker */
+  border-bottom-color: #555 !important; /* Subgrid line color */
+}
+.flipping-cell-face.first-row-face {
+  border-top: none !important; /* Relies on SudokuGrid main border */
+}
+.flipping-cell-face.first-col-face {
+  border-left: none !important; /* Relies on SudokuGrid main border */
+}
+
+/* Cell states: clue, selected, locked (applied to faces) */
+.flipping-cell-face.clue-face {
+  background-color: #f0f0f0;
+}
+.flipping-cell-face.selected-face:not(.clue-face) {
+  outline: 2px solid #0056b3; /* Darker blue for selected to stand out */
+  outline-offset: -2px;
+  z-index: 10 !important;
+}
+.flipping-cell-face.locked-face {
+  box-shadow: inset 0 0 0 2px #0056b3;
+  z-index: 3; /* Above general highlights but below selection */
+}
+
+/* Background highlights for hovered row/col/subgrid */
+.flipping-cell-outer-wrapper.highlight-row .flipping-cell-face:not(.hovered-face):not(.clue-face),
+.flipping-cell-outer-wrapper.highlight-col .flipping-cell-face:not(.hovered-face):not(.clue-face),
+.flipping-cell-outer-wrapper.highlight-subgrid .flipping-cell-face:not(.hovered-face):not(.clue-face) {
+  background-color: rgba(151, 192, 255, 0.3);
+}
+.flipping-cell-outer-wrapper.highlight-row .flipping-cell-face.clue-face:not(.hovered-face),
+.flipping-cell-outer-wrapper.highlight-col .flipping-cell-face.clue-face:not(.hovered-face),
+.flipping-cell-outer-wrapper.highlight-subgrid .flipping-cell-face.clue-face:not(.hovered-face) {
+  background-color: #e8e8e8; /* Subtle highlight for clues in highlighted areas */
+}
+
+/* Background highlight for the directly hovered cell */
+.flipping-cell-outer-wrapper.hovered-cell .flipping-cell-face:not(.clue-face) {
+  background-color: rgba(104, 195, 255, 0.6);
+  z-index: 5; /* Ensure hovered cell face is above other general highlights */
+}
+.flipping-cell-outer-wrapper.hovered-cell .flipping-cell-face.clue-face {
+  background-color: #e0e0e0; /* Darker clue background on direct hover */
+  z-index: 5;
+}
+
+/* --- Emphasized Borders for Highlighted Areas --- */
+/* For a highlighted row, all cells in that row get prominent top/bottom borders */
+.flipping-cell-outer-wrapper.highlight-row .flipping-cell-face {
+  border-top-width: 2px !important;
+  border-bottom-width: 2px !important;
+  border-top-color: #007bff !important;
+  border-bottom-color: #007bff !important;
+  z-index: 2; /* Bring these borders above default ones */
+}
+/* Correct top border for first-row cells (it should remain none due to grid border) */
+.flipping-cell-outer-wrapper.highlight-row .flipping-cell-face.first-row-face {
+  border-top-width: 0 !important; /* Effectively 'none' but respects !important */
+  border-top-color: transparent !important; /* Match width behavior */
+}
+
+/* For a highlighted column, all cells in that column get prominent left/right borders */
+.flipping-cell-outer-wrapper.highlight-col .flipping-cell-face {
+  border-left-width: 2px !important;
+  border-right-width: 2px !important;
+  border-left-color: #007bff !important;
+  border-right-color: #007bff !important;
+  z-index: 2;
+}
+/* Correct left border for first-col cells */
+.flipping-cell-outer-wrapper.highlight-col .flipping-cell-face.first-col-face {
+  border-left-width: 0 !important;
+  border-left-color: transparent !important;
+}
+
+/* For highlighted subgrids, change color of existing thick subgrid divider lines */
+.flipping-cell-outer-wrapper.highlight-subgrid .flipping-cell-face.subgrid-border-right-face {
+  border-right-color: #007bff !important;
+  z-index: 2; /* Ensure these colored dividers are prominent */
+}
+.flipping-cell-outer-wrapper.highlight-subgrid .flipping-cell-face.subgrid-border-bottom-face {
+  border-bottom-color: #007bff !important;
+  z-index: 2;
+}
+
+/* Unused helper classes, can be removed unless you plan to use CSS variables for them */
+/*
+.highlight-border-color {
+  border-color: #007bff !important;
+}
+.highlight-border-width {
+  border-width: 2px !important;
+}
+.highlight-border-style {
+    border-width: 2px !important;
+    border-style: solid !important;
+    border-color: #007bff !important;
+    z-index: 2;
+}
+*/

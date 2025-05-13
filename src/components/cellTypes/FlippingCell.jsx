@@ -106,7 +106,7 @@ function FlippingCell({
         let smallHintContent = '';
         const fontSizeBase = 450 / gridSize;
         const valueStyle = { fontSize: `${fontSizeBase * (gridSize === 16 ? 0.45 : 0.5)}px`, color: '' };
-        const smallHintStyle = { fontSize: `${fontSizeBase * (gridSize === 16 ? 0.25 : 0.3)}px` };
+        const smallHintStyle = { fontSize: `${fontSizeBase * (gridSize === 16 ? 0.35 : 0.5)}px` };
 
         if (isClue) {
           displayContent = getDisplayValue(initialValue, gridSize);
@@ -191,7 +191,9 @@ function FlippingCell({
           onMouseEnter={onMouseEnter}
           onMouseDown={handleMouseDown}
           onContextMenu={handleContextMenu} 
-          style={{ cursor: isClue ? 'default' : 'pointer' }}
+          style={{ cursor: isClue ? 'default' : 'pointer',
+                position: 'relative' 
+            }}
         >
           <div className="flipping-cell-scene">
             <div
