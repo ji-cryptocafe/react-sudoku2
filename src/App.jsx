@@ -78,7 +78,7 @@ function App() {
     // Initialize cellTypesBoard
   const newCellTypesBoard = Array(gridSize)
     .fill(null)
-    .map(() => Array(gridSize).fill('standard')); // All standard for now
+    .map(() => Array(gridSize).fill('flipping')); // All standard for now
     setCellTypesBoard(newCellTypesBoard); // SET THE NEW STATE
 
     setLockedCells([]);
