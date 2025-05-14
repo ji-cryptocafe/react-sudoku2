@@ -22,48 +22,50 @@ body {
   position: relative; /* For stacking context of modal */
 }
 
-/* NEW: Top Bar Styling */
+/* Top Bar Styling */
 #top-bar {
   display: flex;
-  justify-content: space-between; /* Pushes controls left, timer right */
+  justify-content: space-between; 
   align-items: center;
   width: 100%;
-  max-width: 454px; /* Match SudokuGrid width (450px + 2px border left + 2px border right) */
-                     /* Or 500px if #canvas-container is the target width */
-                     /* Adjust this based on the exact width of your .sudoku-grid */
-  padding: 0; /* No padding for the bar itself, children will handle spacing */
-  margin-bottom: 15px; /* Space between top-bar and game-area */
+  /* SudokuGrid is 450px wide + 2px border each side = 454px. 
+     #top-bar will be centered above this part of the game area by default if its parent is wider.
+     If #play-area-wrapper (canvas + sidebars) is wider than 454px, this will look fine.
+     Let's set its max-width to be similar to the canvas part for alignment,
+     or allow it to span wider if game-area content makes sense.
+     For now, matching the old behavior for consistency. */
+  max-width: 454px;
+  padding: 0; 
+  margin-bottom: 15px; 
   box-sizing: border-box;
 }
 
 #top-bar-controls {
   display: flex;
-  gap: 10px; /* Space between the New Game and Check Solution buttons */
-  flex-grow: 1; /* Allows this container to take up space */
+  gap: 10px; 
+  flex-grow: 1; 
 }
 
-#top-bar .glossy-button { /* Targets buttons specifically within the top bar */
-  padding: 10px 15px; /* Adjust padding as needed for visual balance */
-  font-size: 0.9em;   /* Slightly smaller font if needed */
-  flex-grow: 1;       /* Make buttons share the space within #top-bar-controls */
-  min-width: 0;       /* Allow buttons to shrink if necessary */
+#top-bar .glossy-button {
+  padding: 10px 15px; 
+  font-size: 0.9em;   
+  flex-grow: 1;       
+  min-width: 0;       
   text-align: center;
-  /* Remove fixed min-width if it was previously set for glossy-button */
 }
 
-.timer-display { /* Timer specific adjustments */
-  font-size: 0.9em; /* Make timer font slightly larger or as desired */
-  font-weight: 400;
+.timer-display { 
+  font-size: 0.9em; 
+  font-weight: 400; /* Was 600 in one definition, 400 in another. Using 400 to match top-bar specific style. */
   color: #333;
-  padding: 10px 15px; /* Match button padding for alignment */
+  padding: 10px 15px; 
   background-color: rgba(255, 255, 255, 0.9);
-  border-radius: 20px; /* Match button radius for consistency */
+  border-radius: 20px; 
   box-shadow: 0 3px 6px rgba(0, 0, 0, 0.08);
-  margin-left: 10px; /* Space between last button and timer */
-  white-space: nowrap; /* Prevent timer text from wrapping */
-  flex-shrink: 0; /* Prevent timer from shrinking if buttons need more space */
+  margin-left: 10px; 
+  white-space: nowrap; 
+  flex-shrink: 0; 
 }
-
 
 /* Game Area (Sudoku Grid + Message) */
 #game-area {
@@ -72,94 +74,148 @@ body {
   align-items: center;
   gap: 15px;
   background-color: rgba(255, 255, 255, 0.75);
-  padding: 20px; /* Padding around the grid */
+  padding: 20px; 
   border-radius: 15px;
   box-shadow: 0 8px 25px rgba(0, 0, 0, 0.1);
   width: 100%;
-  /* max-width of game-area should be wider than the grid if it has padding */
-  /* e.g., if grid is 454px, and padding is 20px left/right, game-area max-width is 494px */
-  max-width: calc(454px + 40px); /* 454px for grid + 20px padding left/right */
+  /* Updated max-width to accommodate sidebars and canvas
+     Canvas (450px) + Left Sidebar (50px) + Right Sidebar (50px) + Gaps (2 * 10px) = 570px
+     Total content width for play-area-wrapper = 570px.
+     Game area padding (20px left + 20px right) = 40px.
+     New max-width for #game-area = 570px + 40px = 610px.
+  */
+  max-width: 610px; 
   box-sizing: border-box;
 }
 
+/* NEW: Play Area Wrapper for Sidebars and Canvas */
+#play-area-wrapper {
+  display: flex;
+  justify-content: center; /* Center items if they don't fill the space */
+  align-items: flex-start; /* Align items to the top; sidebars will match canvas height */
+  gap: 10px; /* Space between sidebars and main canvas area */
+  width: 100%;
+  max-width: 570px; /* Fixed width: 50px (L-sidebar) + 10px (gap) + 450px (canvas) + 10px (gap) + 50px (R-sidebar) */
+}
+
+/* NEW: Sidebar Styling */
+.sidebar {
+  display: flex;
+  flex-direction: column;
+  justify-content: space-around; /* Evenly distribute buttons vertically */
+  align-items: center; /* Center buttons horizontally */
+  width: 50px; /* Fixed width for sidebar */
+  height: 450px; /* Match the height of the SudokuGrid/canvas-container */
+  padding: 10px 0; /* Vertical padding for buttons */
+  box-sizing: border-box;
+  /* Optional: add a subtle background or border if desired */
+  /* background-color: rgba(0,0,0,0.02); */
+  /* border-radius: 8px; */
+}
+
+/* NEW: Sidebar Button Styling (Circular, Apple-style glossy) */
+.sidebar-button {
+  width: 44px;
+  height: 44px;
+  border-radius: 50%; /* Circular */
+  padding: 0; /* Remove padding, use flex to center content */
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  font-size: 13px; /* Adjust as needed for icons or short text */
+  font-weight: 600;
+  color: #444; /* Darker text for better contrast on light button */
+  text-shadow: 0 1px 0 rgba(255, 255, 255, 0.6); /* Subtle text highlight */
+  cursor: pointer;
+  background: linear-gradient(to bottom, #ffffff 0%, #f3f3f3 100%); /* Glossy background */
+  border: 1px solid #cccccc; /* Slightly softer border */
+  box-shadow: 0 2px 3px rgba(0, 0, 0, 0.08), /* Softer outer shadow */
+              inset 0 1px 1px rgba(255, 255, 255, 0.8), /* Inner top highlight */
+              inset 0 -1px 1px rgba(0, 0, 0, 0.03); /* Subtle inner bottom shadow */
+  transition: all 0.2s ease-out;
+  outline: none;
+}
+
+.sidebar-button:hover {
+  background: linear-gradient(to bottom, #ffffff 0%, #e9e9e9 100%); /* Slightly darker on hover */
+  border-color: #bbbbbb;
+  box-shadow: 0 3px 5px rgba(0, 0, 0, 0.1),
+              inset 0 1px 1px rgba(255, 255, 255, 0.8),
+              inset 0 -1px 1px rgba(0, 0, 0, 0.03);
+  /* transform: translateY(-1px); Optional: lift effect */
+}
+
+.sidebar-button:active {
+  background: linear-gradient(to top, #ffffff 0%, #e9e9e9 100%); /* Inverted gradient for pushed feel */
+  box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.15), /* Stronger inner shadow */
+              0 1px 0 rgba(255,255,255,0.7); /* Remove lift, ensure it looks pressed */
+  transform: translateY(1px); /* Push down effect */
+  color: #333;
+}
+
+
+/* Wrapper for the main canvas area, sits between sidebars */
+#canvas-container-main {
+  width: 450px; /* To contain the 450px wide SudokuGrid */
+  height: 450px; /* Match SudokuGrid height */
+  display: flex; /* To center #canvas-container if it were smaller, though it's exact fit */
+  justify-content: center;
+  align-items: center;
+  flex-shrink: 0; /* Prevent shrinking if #play-area-wrapper is too constrained */
+}
+
+/* #canvas-container holds the SudokuGrid component directly */
 #canvas-container {
   position: relative;
   width: 450px;  /* Fixed width for the canvas that SudokuGrid is in */
   height: 450px; /* Fixed height */
-  /* max-width: 100%; Ensure it fits within game-area padding if game-area is responsive */
   display: flex;
   justify-content: center;
   align-items: center;
+  /* The SudokuGrid component itself has a 2px border making it visually 454px if box-sizing: content-box.
+     If box-sizing: border-box for .sudoku-grid, then it's 450px total.
+     Assuming .sudoku-grid is border-box and its total width is 450px.
+     If SudokuGrid's internal style means it's 450px content + border, then #canvas-container should be 454px.
+     Let's assume SudokuGrid's `width: 450px` includes its border due to global box-sizing.
+  */
 }
+
 
 /* Main Content Wrapper for Blur Effect */
 #main-content-wrapper {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 20px; /* Consistent spacing */
+  gap: 20px; 
   width: 100%;
   transition: filter 0.3s ease-in-out;
 }
 
 #main-content-wrapper.blurred {
   filter: blur(5px);
-  pointer-events: none; /* Prevent interaction with blurred content */
+  pointer-events: none; 
 }
 
-/* Timer Display */
-.timer-display {
-  font-size: 0.95em;
-  font-weight: 600;
-  color: #333;
-  padding: 10px 18px;
-  background-color: rgba(255, 255, 255, 0.9);
-  border-radius: 20px;
-  box-shadow: 0 3px 6px rgba(0, 0, 0, 0.08);
-  margin-top: 0; /* Removed specific margin, gap handles it */
-}
+/* Game Area (Sudoku Grid + Message) - Redundant with above, ensure one definition */
+/* Timer Display - Redundant with above, ensure one definition */
 
-/* Game Area (Sudoku Grid + Message) */
-#game-area {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 15px; /* Space between grid and message */
-  background-color: rgba(255, 255, 255, 0.75);
-  padding: 20px;
-  border-radius: 15px;
-  box-shadow: 0 8px 25px rgba(0, 0, 0, 0.1);
-  width: 100%;
-  max-width: 540px; /* Controls max width of this section */
-  box-sizing: border-box;
-}
-
-#canvas-container {
-  position: relative;
-  width: 500px; /* Default size, can be overridden by max-width */
-  height: 500px; /* Default size */
-  max-width: 100%; /* Ensure it fits within game-area padding */
-  /* max-height: 80vw; Removed as it might conflict with width/height square aspect */
-  display: flex;
-  justify-content: center;
-  align-items: center;
-}
 
 #canvas-container canvas {
   /* Assuming SudokuGrid renders a canvas or a div styled like one */
   max-width: 100%;
   max-height: 100%;
-  height: auto; /* Maintain aspect ratio */
+  height: auto; 
   border-radius: 8px;
   box-shadow: 0 5px 15px rgba(0, 0, 0, 0.05);
 }
-/* If SudokuGrid is a div, style its .sudoku-grid class */
+
 .sudoku-grid {
   background-color: #fff;
-  user-select: none; /* Prevent text selection */
-  /* width and height for .sudoku-grid are set inline in SudokuGrid.jsx */
-  /* these can be percentages to be responsive within #canvas-container */
-  /* e.g., width: 100%; height: 100%; */
+  user-select: none; 
+  /* width and height for .sudoku-grid are set inline in SudokuGrid.jsx as 450px.
+     Its border (2px solid #333) is also inline style indirectly through the component.
+     If global box-sizing is border-box, this is 450px total.
+  */
 }
 
 /* Message Area */
@@ -191,10 +247,10 @@ body {
 /* Existing Glossy Styles (ensure they are present and potentially tweak if needed) */
 .glossy-button,
 .glossy-select {
-  padding: 10px 18px; /* Default padding */
+  padding: 10px 18px; 
   border: 1px solid rgba(0, 0, 0, 0.15);
-  border-radius: 20px; /* Slightly less rounded for a more modern feel? Or keep 20px */
-  font-size: 14px;    /* Default font size */
+  border-radius: 20px; 
+  font-size: 14px;    
   font-weight: 500;
   color: #333;
   cursor: pointer;
@@ -234,33 +290,18 @@ body {
 }
 
 /* Cell and SudokuGrid specific styles (ensure they are compatible) */
-/* Cell and SudokuGrid specific styles (ensure they are compatible) */
-.cell {
+.cell { /* This class is used by StandardCell. FlippingCell has its own structure. */
   display: flex;
   flex-direction: column;
   justify-content: center;
   align-items: center;
   cursor: pointer;
-  border: 1px solid #ddd; /* Default border for all sides */
-  /* NEW: Adjust default border if outer grid handles it, or remove top/left for first-row/col cells */
-  /* For instance, if the SudokuGrid container has a 2px border,
-     cells on the edge might not need their own outer border.
-     The `borderTop: none` and `borderLeft: none` in Cell.jsx for r=0/c=0 handles this if
-     the SudokuGrid div has a border.
-     If you want individual cells to complete the border:
-     border-top: 1px solid #ddd;
-     border-left: 1px solid #ddd;
-     The `border: 1px solid #ddd;` above covers all sides by default.
-     The inline styles `borderTop: none` and `borderLeft: none` for cells at row 0 or col 0
-     will remove the top/left border for those cells, relying on the SudokuGrid container's border.
-     This is a common approach.
-  */
+  border: 1px solid #ddd; 
   box-sizing: border-box;
   transition: background-color 0.1s ease-in-out;
   position: relative;
 }
 
-/* NEW Styles for subgrid borders */
 .cell.subgrid-border-right {
   border-right: 2px solid #555 !important;
 }
@@ -268,20 +309,6 @@ body {
 .cell.subgrid-border-bottom {
   border-bottom: 2px solid #555 !important;
 }
-
-/* Optional: Styles for first row/column cells if you removed their top/left borders */
-/* And the SudokuGrid container doesn't have its own border, or you want to ensure it.
-   If SudokuGrid has its own border, these specific rules might not be needed,
-   as the cell's default border or lack thereof (from inline style) will combine with the grid border.
-*/
-/*
-.cell.first-row-cell {
-  border-top: 2px solid #333 !important; // Assuming matches SudokuGrid border
-}
-.cell.first-col-cell {
-  border-left: 2px solid #333 !important; // Assuming matches SudokuGrid border
-}
-*/
 
 .cell.clue {
   font-weight: bold;
@@ -314,64 +341,84 @@ body {
   outline-offset: -2px;
   z-index: 10;
 }
+/* Highlight and hover styles for .cell were commented out, assuming FlippingCell handles it.
+   If StandardCell is used, these might be needed.
 .cell.highlight-row,
 .cell.highlight-col,
 .cell.highlight-subgrid {
-  /* background-color: rgba(151, 192, 255, 0.3); */ 
-  /* COMMENT OUT or REMOVE if FlippingCell.css handles this */
-  transform: scale(1.1); /* NEW: Scale up highlighted cells */
+   background-color: rgba(151, 192, 255, 0.3); 
 }
 .cell.hovered-cell {
-  /* background-color: rgba(104, 195, 255, 0.6); */ /* COMMENT OUT or REMOVE */
-  /* z-index: 5; */ 
-  /* FlippingCell.css handles its own z-index for faces if needed */
-  transform: scale(1.15); /* NEW: Scale up hovered cell even more */
+   background-color: rgba(104, 195, 255, 0.6); 
 } 
+*/
+
 /* Responsive Adjustments */
 @media (max-width: 768px) {
+  /* Adjust #game-area and #play-area-wrapper for smaller screens */
   #game-area {
     padding: 15px;
+    max-width: 100%; /* Allow full width */
   }
+
+  #play-area-wrapper {
+    flex-direction: column; /* Stack sidebars and canvas */
+    align-items: center; /* Center items when stacked */
+    max-width: 100%;
+    gap: 15px;
+  }
+
+  .sidebar {
+    flex-direction: row; /* Horizontal buttons in sidebar */
+    width: auto; /* Auto width to fit buttons */
+    max-width: 90vw; /* Max width for sidebars */
+    height: auto; /* Auto height */
+    justify-content: center; /* Center buttons */
+    gap: 10px;
+  }
+  
+  #canvas-container-main,
   #canvas-container {
-    width: 90vw; /* Use viewport width */
-    height: 90vw; /* Maintain square */
+    width: 90vw; 
+    height: 90vw; 
   }
-  #bottom-controls {
-    flex-direction: column; /* Stack buttons on smaller screens */
-    gap: 12px;
-  }
-  #bottom-controls .glossy-button {
-    width: 70%;
-    max-width: 300px; /* Max width for stacked buttons */
-  }
+  /* SudokuGrid component itself will need to adjust its inline styles for width/height
+     if it's to be responsive. This CSS change only affects its container.
+     The fixed 450px in SudokuGrid.jsx style prop will override this for the grid itself.
+  */
+
+  /* Removed #bottom-controls specific responsive styles as it was removed from HTML */
 }
 
 @media (max-width: 480px) {
   body {
-    padding: 10px;
+    padding: 10px 0; /* Reduce body padding */
   }
   .app-container {
-    gap: 15px;
+    gap: 10px; /* Reduce gap */
   }
   #top-bar .glossy-button {
     font-size: 0.8em;
     padding: 8px 10px;
   }
   .timer-display {
-    font-size: 1em;
+    font-size: 0.9em; /* Match top-bar button font or keep slightly larger */
     padding: 8px 10px;
-    border-radius: 10px;
+    border-radius: 15px; /* Consistent rounding */
   }
   #game-area {
     padding: 10px;
   }
-  #message-area {
-    font-size: 18px;
+  .sidebar {
+    padding: 5px 0;
   }
-  #bottom-controls .glossy-button {
-    padding: 10px 20px;
-    font-size: 0.9em;
-    width: 80%;
+  .sidebar-button {
+    width: 40px;
+    height: 40px;
+    font-size: 12px;
+  }
+  #message-area {
+    font-size: 16px; /* Smaller message font */
   }
   .glossy-button,
   .glossy-select {
@@ -391,17 +438,17 @@ body {
 /* Lock Icon Styles */
 .lock-icon-container {
   position: absolute;
-  top: 2px; /* Adjusted for potential small-hint */
-  right: 2px; /* Adjusted for potential small-hint */
+  top: 2px; 
+  right: 2px; 
   width: 16px;
   height: 16px;
   display: flex;
   justify-content: center;
   align-items: center;
   cursor: pointer;
-  font-size: 10px; /* Size of the lock emoji/character */
-  z-index: 2; /* Above cell content, below selected outline potentially */
-  user-select: none; /* Prevent text selection of the icon */
+  font-size: 10px; 
+  z-index: 2; 
+  user-select: none; 
   transition: opacity 0.2s ease-in-out;
 }
 
@@ -417,8 +464,40 @@ body {
   opacity: 1;
 }
 
-/* Locked Cell Style */
 .cell.locked {
-  /* Using inset box-shadow to avoid layout shifts and conflict with subgrid borders */
-  box-shadow: inset 0 0 0 2px #0056b3; /* A darker blue for locked state */
+  box-shadow: inset 0 0 0 2px #0056b3; 
 }
+
+/* Style for active sidebar button (e.g., filter enabled) */
+.sidebar-button.active {
+  background: linear-gradient(to bottom, #a0ddff 0%, #6cace0 100%); /* More distinct active blue */
+  border-color: #5a99cf;
+  color: #002244; /* Darker text for active state */
+  box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.2), /* Stronger inner shadow */
+              0 1px 0 rgba(255,255,255,0.6); /* Top highlight */
+  font-weight: 700; /* Bolder text */
+}
+.sidebar-button.active:hover {
+  background: linear-gradient(to bottom, #90cff0 0%, #5c9bd1 100%);
+}
+
+
+/* Style for disabled context menu options */
+.cell-context-menu .context-menu-value-button.disabled-context-option {
+  opacity: 0.5; /* More visible than 0.4 but still clearly disabled */
+  cursor: not-allowed;
+  background: linear-gradient( to bottom, #f0f0f0 0%, #e0e0e0 100% ) !important; /* Override hover if any */
+  color: #999 !important;
+  border-color: #d0d0d0 !important;
+  box-shadow: inset 0 1px 2px rgba(0,0,0,0.05) !important;
+  transform: none !important; /* Prevent hover transform */
+}
+
+.cell-context-menu .context-menu-value-button.disabled-context-option:hover {
+  /* Explicitly keep it looking disabled on hover */
+  background: linear-gradient( to bottom, #f0f0f0 0%, #e0e0e0 100% ) !important;
+  color: #999 !important;
+  border-color: #d0d0d0 !important;
+  box-shadow: inset 0 1px 2px rgba(0,0,0,0.05) !important;
+}
+ 

@@ -70,7 +70,13 @@ function SudokuGrid({
           }
           onClick={() => onCellClick(r, c)}
           onMouseEnter={() => setHoveredCell({ row: r, col: c })}
-          onCellContextMenu={onCellContextMenu} // Pass down directly
+          onCellContextMenu={(eventFiredByCell, rowReceivedFromCell, colReceivedFromCell) => {
+            // r and c here are from SudokuGrid's loops for this specific cell instance
+            console.log(`[SudokuGrid cell R${r}C${c}] Received context menu. event=${eventFiredByCell ? 'yes':'no'}, rowFromCell=${rowReceivedFromCell}, colFromCell=${colReceivedFromCell}. Will use loop r=${r}, c=${c}.`);
+            // `onCellContextMenu` here is SudokuGrid's OWN PROP received from App.jsx
+            onCellContextMenu(eventFiredByCell, r, c);
+            }
+          }
           gridSize={gridSize}
           gameState={gameState}
           isLocked={lockedCells.some(

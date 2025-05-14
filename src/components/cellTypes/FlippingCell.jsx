@@ -161,17 +161,16 @@ function FlippingCell({
         }
       };
 
-    const handleContextMenuInternal = (event) => {
-        // Decide whether to show custom menu based on component's own state/props
+      const handleContextMenuInternal = (event) => {
+        // Props `row` and `col` for this cell instance
+        console.log(`[FlippingCell R${row}C${col}] handleContextMenuInternal. Cell's own props: row=${row}, col=${col}`);
         if (!isClue && gameState === 'Playing') {
-            event.preventDefault(); // Prevent default browser menu
-            if (onCellContextMenu) {
-                // Call the handler passed down from SudokuGrid,
-                // which in turn calls App's handler with (clientX, clientY, row, col)
-                onCellContextMenu(event); // Pass the event object up
+            event.preventDefault(); 
+            if (onCellContextMenu) { // This is the prop from SudokuGrid
+                console.log(`[FlippingCell R${row}C${col}] Calling onCellContextMenu prop with event, and its own row=${row}, col=${col}`);
+                onCellContextMenu(event, row, col); 
             }
         }
-        // If conditions not met, do nothing (allow default browser menu)
     };
 
     // --- Outer wrapper and JSX structure remain the same ---
@@ -190,7 +189,7 @@ function FlippingCell({
           onClick={handleOuterClick}
           onMouseEnter={onMouseEnter}
           onMouseDown={handleMouseDown}
-          onContextMenu={handleContextMenu} 
+          onContextMenu={handleContextMenuInternal} // Use the internal handler
           style={{ cursor: isClue ? 'default' : 'pointer',
                 position: 'relative' 
             }}

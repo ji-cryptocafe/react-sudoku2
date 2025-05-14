@@ -1,5 +1,5 @@
 // src/App.jsx
-import React, { useState, useEffect, useCallback } from 'react'; // useRef removed as timerIntervalIdRef is in useTimer
+import React, { useState, useEffect, useCallback } from 'react';
 import SudokuGrid from './components/SudokuGrid';
 import Controls from './components/Controls';
 import TimerDisplay from './components/TimerDisplay';
@@ -10,11 +10,11 @@ import ParticleEffect from './components/ParticleEffect';
 import {
   generateNewPuzzle,
   checkUserSolution as checkUserSolutionLogic,
+  getValidNumbersForCell,
 } from './logic/sudokuLogic';
 import { EMPTY_CELL_VALUE, GRID_SIZES, DIFFICULTIES } from './logic/constants';
 import { deepCopy, getInternalValueFromKey } from './logic/utils';
 
-// Import custom hooks
 import { useTimer } from './hooks/useTimer';
 import { useNewGameModal } from './hooks/useNewGameModal';
 import { useCellContextMenu } from './hooks/useCellContextMenu';
@@ -33,28 +33,22 @@ function App() {
   const [gameMessage, setGameMessage] = useState('');
   const [lockedCells, setLockedCells] = useState([]);
   const [cellTypesBoard, setCellTypesBoard] = useState([]);
-  // REMOVE OLD useState DECLARATIONS that are now handled by hooks:
-  // const [elapsedTime, setElapsedTime] = useState(0); // REMOVED
-  // const timerIntervalIdRef = useRef(null); // REMOVED
-  // const [isNewGameModalOpen, setIsNewGameModalOpen] = useState(false); // REMOVED
-  // const [cellContextMenu, setCellContextMenu] = useState({ ... }); // REMOVED
+  
+  const [isFilteringEnabled, setIsFilteringEnabled] = useState(false);
 
-  // Using custom hooks
   const {
     elapsedTime,
     startTimer,
     stopTimer,
     resetTimer,
-    setElapsedTime: setTimerElapsedTime,
-  } = useTimer(); // Renamed setElapsedTime from hook if needed to avoid conflict, though original should be removed
+  } = useTimer();
   const {
     isNewGameModalOpen,
     openNewGameModal,
     closeNewGameModal,
-    setIsNewGameModalOpen: setModalOpen,
-  } = useNewGameModal(); // Renamed setIsNewGameModalOpen from hook for clarity
+  } = useNewGameModal();
   const {
-    cellContextMenu,
+    cellContextMenu, // Get the LATEST cellContextMenu on each render for the non-memoized function
     openMenu: openContextMenu,
     closeMenu: closeContextMenuAction,
     closeMenuAndResetKey: closeContextMenuAndResetKeyAction,
@@ -75,11 +69,10 @@ function App() {
     setSolutionBoard(puzzle.solution);
     setUserBoard(deepCopy(puzzle.initialBoard));
 
-    // Initialize cellTypesBoard
-  const newCellTypesBoard = Array(gridSize)
-    .fill(null)
-    .map(() => Array(gridSize).fill('flipping')); // All standard for now
-    setCellTypesBoard(newCellTypesBoard); // SET THE NEW STATE
+    const newCellTypesBoard = Array(gridSize)
+      .fill(null)
+      .map(() => Array(gridSize).fill('standard'));
+    setCellTypesBoard(newCellTypesBoard);
 
     setLockedCells([]);
     setSelectedCell(null);
@@ -93,7 +86,6 @@ function App() {
     closeAllPopups,
     resetTimer,
     startTimer,
-    // setInitialCluesBoard, setSolutionBoard, setUserBoard, setLockedCells, setSelectedCell, setHoveredCell, setGameMessage, setGameState (implicit dependencies)
   ]);
 
   useEffect(() => {
@@ -101,19 +93,8 @@ function App() {
     return () => {
       stopTimer();
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [gridSize, difficulty]); // startGame is recreated if gridSize/difficulty changes, so it's not needed in dep array directly if those are.
-  // However, best practice is to include startGame and memoize it properly.
-  // For now, to ensure it runs on gridSize/difficulty change:
-  // Re-added startGame to ensure it calls on settings change. If startGame itself is memoized correctly with gridSize/difficulty, this is fine.
-
-  // Re-evaluating useEffect for startGame:
-  // The initial call is fine. If startGame is called again due to gridSize/difficulty change,
-  // this useEffect will re-run.
-  useEffect(() => {
-    startGame();
-    return () => stopTimer();
-  }, [startGame]); // Keep startGame here. Ensure its own useCallback deps are complete.
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [startGame]);
 
   const handleCellClick = useCallback(
     (row, col) => {
@@ -138,15 +119,25 @@ function App() {
         return;
       }
       setSelectedCell({ row, col });
-      setUserBoard((prevBoard) => {
-        const newBoard = deepCopy(prevBoard);
-        let currentValue = newBoard[row][col];
-        if (currentValue === gridSize - 1) {
-          newBoard[row][col] = EMPTY_CELL_VALUE;
-        } else if (currentValue === EMPTY_CELL_VALUE) {
-          newBoard[row][col] = 0;
+
+      setUserBoard((prevUserBoard) => {
+        const newBoard = deepCopy(prevUserBoard);
+        let currentValueInCell = newBoard[row][col];
+
+        if (isFilteringEnabled) {
+          const validNumbersBasedOnClues = getValidNumbersForCell(initialCluesBoard, row, col, gridSize);
+          const cycleOptions = [...new Set([EMPTY_CELL_VALUE, ...validNumbersBasedOnClues])].sort((a, b) => a - b);
+          let currentIndex = cycleOptions.indexOf(currentValueInCell);
+          let nextIndex = (currentIndex + 1) % cycleOptions.length;
+          newBoard[row][col] = cycleOptions[nextIndex];
         } else {
-          newBoard[row][col] = currentValue + 1;
+          if (currentValueInCell === gridSize - 1) {
+            newBoard[row][col] = EMPTY_CELL_VALUE;
+          } else if (currentValueInCell === EMPTY_CELL_VALUE) {
+            newBoard[row][col] = 0;
+          } else {
+            newBoard[row][col] = currentValueInCell + 1;
+          }
         }
         return newBoard;
       });
@@ -155,10 +146,10 @@ function App() {
       gameState,
       initialCluesBoard,
       gridSize,
-      cellContextMenu.visible,
+      cellContextMenu.visible, // Depends on cellContextMenu object
       lockedCells,
       closeContextMenuAndResetKeyAction,
-      // setSelectedCell, setUserBoard (implicit dependencies)
+      isFilteringEnabled,
     ]
   );
 
@@ -183,10 +174,9 @@ function App() {
     gameState,
     userBoard,
     solutionBoard,
-    cellContextMenu.visible,
+    cellContextMenu.visible, // Depends on cellContextMenu object
     closeContextMenuAndResetKeyAction,
     stopTimer,
-    // setGameState, setGameMessage (implicit dependencies)
   ]);
 
   const handleNewGameRequest = useCallback(() => {
@@ -196,7 +186,7 @@ function App() {
     openNewGameModal();
   }, [
     openNewGameModal,
-    cellContextMenu.visible,
+    cellContextMenu.visible, // Depends on cellContextMenu object
     closeContextMenuAndResetKeyAction,
   ]);
 
@@ -207,10 +197,9 @@ function App() {
   const handleStartGameFromModal = useCallback(
     (newSize, newDifficulty) => {
       closeAllPopups();
-
       if (newSize !== gridSize || newDifficulty !== difficulty) {
-        setGridSize(newSize); // This will trigger the useEffect with startGame
-        setDifficulty(newDifficulty); // This will trigger the useEffect with startGame
+        setGridSize(newSize);
+        setDifficulty(newDifficulty);
       } else {
         startGame();
       }
@@ -219,7 +208,7 @@ function App() {
       gridSize,
       difficulty,
       startGame,
-      closeAllPopups /*setGridSize, setDifficulty (implicit dependencies)*/,
+      closeAllPopups,
     ]
   );
 
@@ -229,6 +218,8 @@ function App() {
 
   const handleOpenCellContextMenu = useCallback(
     (x, y, row, col) => {
+      console.log(`[App.jsx] handleOpenCellContextMenu called with: x=${x}, y=${y}, rowParam=${row}, colParam=${col}`);
+
       const isCellLocked = lockedCells.some(
         (lcell) => lcell.row === row && lcell.col === col
       );
@@ -240,8 +231,17 @@ function App() {
       if (isNewGameModalOpen) {
         closeNewGameModal();
       }
-
-      openContextMenu(x, y, row, col);
+      
+      let validNumbersList = null;
+      if (isFilteringEnabled) {
+        if (initialCluesBoard && initialCluesBoard.length === gridSize && initialCluesBoard[row] && initialCluesBoard[row][col] !== undefined) {
+            validNumbersList = getValidNumbersForCell(initialCluesBoard, row, col, gridSize);
+        } else {
+            console.warn("handleOpenCellContextMenu: initialCluesBoard not ready for filtering. Menu will show all options.");
+            validNumbersList = Array.from({ length: gridSize }, (_, i) => i);
+        }
+      }
+      openContextMenu(x, y, row, col, validNumbersList, isFilteringEnabled);
     },
     [
       isNewGameModalOpen,
@@ -249,33 +249,69 @@ function App() {
       openContextMenu,
       closeNewGameModal,
       closeContextMenuAndResetKeyAction,
+      isFilteringEnabled,
+      initialCluesBoard,
+      gridSize,
     ]
   );
 
-  const handleSelectValueFromContextMenu = useCallback(
-    (value) => {
-      if (cellContextMenu.row !== null && cellContextMenu.col !== null) {
-        const { row, col } = cellContextMenu;
+  // --- TEMPORARY DIAGNOSTIC CHANGE: Not using useCallback ---
+  const handleSelectValueFromContextMenu = (value) => {
+      const currentContextRow = cellContextMenu.row; // Access LATEST from hook's current state
+      const currentContextCol = cellContextMenu.col;
+
+      console.log("Inside (non-memoized) handleSelectValueFromContextMenu:", { 
+          selectedVal: value, 
+          ctxRow: currentContextRow, 
+          ctxCol: currentContextCol,
+          rawContextMenuState: JSON.stringify(cellContextMenu) // Log the whole state
+      });
+
+      if (currentContextRow !== null && currentContextRow !== undefined && 
+          currentContextCol !== null && currentContextCol !== undefined) {
+        
+        if (currentContextRow >= gridSize || currentContextCol >= gridSize || currentContextRow < 0 || currentContextCol < 0) {
+            console.error("CRITICAL: row/col from context menu are out of bounds for current gridSize.", {
+                contextMenuRow: currentContextRow, 
+                contextMenuCol: currentContextCol, 
+                currentGridSize: gridSize,
+            });
+            closeContextMenuAction(); 
+            return; 
+        }
+
         const isCellLocked = lockedCells.some(
-          (lcell) => lcell.row === row && lcell.col === col
+          (lcell) => lcell.row === currentContextRow && lcell.col === currentContextCol
         );
         if (!isCellLocked) {
           setUserBoard((prevBoard) => {
+            if (!prevBoard || prevBoard.length !== gridSize || !prevBoard[currentContextRow] || prevBoard[currentContextRow].length !== gridSize) {
+              console.error("CRITICAL: prevBoard is not correctly structured or context menu row is out of bounds for prevBoard.", {
+                prevBoardLength: prevBoard ? prevBoard.length : 'undefined',
+                isPrevBoardArray: Array.isArray(prevBoard),
+                rowFromContextMenu: currentContextRow,
+                colFromContextMenu: currentContextCol,
+                expectedGridSize: gridSize,
+                actualRowLength: prevBoard && prevBoard[currentContextRow] ? prevBoard[currentContextRow].length : 'N/A (or prevBoard[row] undefined)',
+              });
+              closeContextMenuAction(); // Close menu if state is bad
+              return prevBoard; 
+            }
             const newBoard = deepCopy(prevBoard);
-            newBoard[row][col] = value;
+            newBoard[currentContextRow][currentContextCol] = value; 
             return newBoard;
           });
         }
+      } else {
+        console.warn("handleSelectValueFromContextMenu: cellContextMenu.row or .col is null/undefined. Skipping update.", {
+            ctxRow: currentContextRow, 
+            ctxCol: currentContextCol
+        });
       }
-      closeContextMenuAction();
-    },
-    [
-      lockedCells,
-      cellContextMenu.row,
-      cellContextMenu.col,
-      closeContextMenuAction /*, setUserBoard (implicit)*/,
-    ]
-  );
+      closeContextMenuAction(); 
+    };
+  // --- END OF TEMPORARY DIAGNOSTIC CHANGE ---
+
 
   const handleToggleLockCell = useCallback(
     (row, col) => {
@@ -300,12 +336,11 @@ function App() {
         }
       });
     },
-    [userBoard, initialCluesBoard /*, setLockedCells (implicit) */]
+    [userBoard, initialCluesBoard]
   );
 
   useEffect(() => {
     if (!cellContextMenu.visible) return;
-
     const closeMenuOnScroll = () => {
       closeContextMenuAndResetKeyAction();
     };
@@ -313,48 +348,25 @@ function App() {
     return () => {
       window.removeEventListener('scroll', closeMenuOnScroll, true);
     };
-  }, [cellContextMenu.visible, closeContextMenuAndResetKeyAction]);
+  }, [cellContextMenu.visible, closeContextMenuAndResetKeyAction]); // Depends on cellContextMenu object
 
   const handleKeyDown = useCallback(
     (event) => {
-      if (
-        gameState !== 'Playing' ||
-        isNewGameModalOpen ||
-        cellContextMenu.visible
-      ) {
+      if (gameState !== 'Playing' || isNewGameModalOpen || cellContextMenu.visible) {
         return;
       }
-
       const { key } = event;
-
       if (key === 'Tab') {
         event.preventDefault();
-        if (
-          !initialCluesBoard ||
-          initialCluesBoard.length === 0 ||
-          initialCluesBoard.length !== gridSize
-        ) {
-          return;
-        }
-
+        if (!initialCluesBoard || initialCluesBoard.length !== gridSize) return;
         let startRow = selectedCell ? selectedCell.row : gridSize - 1;
         let startCol = selectedCell ? selectedCell.col : gridSize - 1;
         let r = startRow;
         let c = startCol;
-
         for (let i = 0; i < gridSize * gridSize; i++) {
           c++;
-          if (c >= gridSize) {
-            c = 0;
-            r++;
-            if (r >= gridSize) {
-              r = 0;
-            }
-          }
-          if (
-            initialCluesBoard[r] &&
-            initialCluesBoard[r][c] === EMPTY_CELL_VALUE
-          ) {
+          if (c >= gridSize) { c = 0; r++; if (r >= gridSize) r = 0; }
+          if (initialCluesBoard[r] && initialCluesBoard[r][c] === EMPTY_CELL_VALUE) {
             setSelectedCell({ row: r, col: c });
             return;
           }
@@ -365,33 +377,35 @@ function App() {
       if (hoveredCell && initialCluesBoard.length > 0 && userBoard.length > 0) {
         const { row, col } = hoveredCell;
         if (
-          (initialCluesBoard[row] &&
-            initialCluesBoard[row][col] !== EMPTY_CELL_VALUE) ||
+          (initialCluesBoard[row] && initialCluesBoard[row][col] !== EMPTY_CELL_VALUE) ||
           lockedCells.some((lc) => lc.row === row && lc.col === col)
-        ) {
-          return;
-        }
+        ) return;
+        
         const internalValue = getInternalValueFromKey(key, gridSize);
         if (internalValue !== null) {
-          setUserBoard((prevBoard) => {
-            const newBoard = deepCopy(prevBoard);
-            newBoard[row][col] = internalValue;
-            return newBoard;
-          });
+          if (isFilteringEnabled) {
+            const validNumbersBasedOnClues = getValidNumbersForCell(initialCluesBoard, row, col, gridSize);
+            if (validNumbersBasedOnClues.includes(internalValue) || internalValue === EMPTY_CELL_VALUE) {
+              setUserBoard((prevBoard) => {
+                const newBoard = deepCopy(prevBoard);
+                newBoard[row][col] = internalValue;
+                return newBoard;
+              });
+            }
+          } else {
+            setUserBoard((prevBoard) => {
+              const newBoard = deepCopy(prevBoard);
+              newBoard[row][col] = internalValue;
+              return newBoard;
+            });
+          }
         }
       }
     },
     [
-      gameState,
-      isNewGameModalOpen,
-      cellContextMenu.visible,
-      hoveredCell,
-      selectedCell,
-      gridSize,
-      initialCluesBoard,
-      userBoard,
-      lockedCells,
-      // setUserBoard, setSelectedCell (implicit dependencies)
+      gameState, isNewGameModalOpen, cellContextMenu.visible, hoveredCell, selectedCell,
+      gridSize, initialCluesBoard, userBoard, lockedCells, isFilteringEnabled, 
+      // cellContextMenu.visible used here
     ]
   );
 
@@ -402,15 +416,18 @@ function App() {
     };
   }, [handleKeyDown]);
 
+  const handleToggleFilter = () => {
+    setIsFilteringEnabled(prev => !prev);
+  };
+
   return (
     <div className="app-container">
       <div
         id="main-content-wrapper"
         className={`${isNewGameModalOpen ? 'blurred' : ''}`}
       >
-        {/* NEW: Top bar for controls and timer */}
         <div id="top-bar">
-          <div id="top-bar-controls"> {/* Wrapper for buttons */}
+          <div id="top-bar-controls">
             <Controls
               onNewGame={handleNewGameRequest}
               onCheckSolution={handleCheckSolution}
@@ -418,53 +435,63 @@ function App() {
             />
           </div>
           <TimerDisplay time={elapsedTime} />
-        </div> {/* End of top-bar */}
+        </div>
 
         <div id="game-area">
-          <div id="canvas-container">
-            {/* ... SudokuGrid rendering logic ... */}
-            {gameState === 'Loading' ||
-            initialCluesBoard.length === 0 ||
-            userBoard.length === 0 ||
-            solutionBoard.length === 0 ||
-            !cellTypesBoard || cellTypesBoard.length !== gridSize ? (
-              <p>Loading puzzle...</p>
-            ) : (
-              <SudokuGrid
-                gridSize={gridSize}
-                initialCluesBoard={initialCluesBoard}
-                userBoard={userBoard}
-                solutionBoard={solutionBoard}
-                cellTypesBoard={cellTypesBoard}
-                selectedCell={selectedCell}
-                hoveredCell={hoveredCell}
-                setHoveredCell={setHoveredCell}
-                onCellClick={handleCellClick}
-                onCellContextMenu={handleOpenCellContextMenu}
-                gameState={gameState}
-                lockedCells={lockedCells}
-                onToggleLock={handleToggleLockCell}
-              />
-            )}
+          <div id="play-area-wrapper">
+            <div id="left-sidebar" className="sidebar">
+              <button 
+                className={`sidebar-button ${isFilteringEnabled ? 'active' : ''}`}
+                aria-label="Toggle Value Filtering"
+                onClick={handleToggleFilter} 
+                title={isFilteringEnabled ? "Disable Clue-Based Filtering" : "Enable Clue-Based Filtering"}
+              >
+                Filt
+              </button>
+              <button className="sidebar-button" aria-label="Upgrade 2">L2</button>
+              <button className="sidebar-button" aria-label="Upgrade 3">L3</button>
+            </div>
+
+            <div id="canvas-container-main"> 
+              <div id="canvas-container"> 
+                {gameState === 'Loading' ||
+                initialCluesBoard.length === 0 || 
+                userBoard.length === 0 ||
+                solutionBoard.length === 0 ||
+                !cellTypesBoard || cellTypesBoard.length !== gridSize ? (
+                  <p>Loading puzzle...</p>
+                ) : (
+                  <SudokuGrid
+                    gridSize={gridSize}
+                    initialCluesBoard={initialCluesBoard}
+                    userBoard={userBoard}
+                    solutionBoard={solutionBoard}
+                    cellTypesBoard={cellTypesBoard}
+                    selectedCell={selectedCell}
+                    hoveredCell={hoveredCell}
+                    setHoveredCell={setHoveredCell}
+                    onCellClick={handleCellClick}
+                    onCellContextMenu={(event, row, col) => handleOpenCellContextMenu(event.clientX, event.clientY, row, col)} 
+                    gameState={gameState}
+                    lockedCells={lockedCells}
+                    onToggleLock={handleToggleLockCell}
+                  />
+                )}
+              </div>
+            </div>
+
+            <div id="right-sidebar" className="sidebar">
+              <button className="sidebar-button" aria-label="Tool 1">R1</button>
+              <button className="sidebar-button" aria-label="Tool 2">R2</button>
+              <button className="sidebar-button" aria-label="Tool 3">R3</button>
+            </div>
           </div>
           <MessageDisplay gameState={gameState} message={gameMessage} />
         </div>
 
-        {/* REMOVED: Old bottom-controls div */}
-        {/*
-        <div id="bottom-controls">
-          <Controls
-            onNewGame={handleNewGameRequest}
-            onCheckSolution={handleCheckSolution}
-            isGamePlaying={gameState === 'Playing'}
-          />
-        </div>
-        */}
-
         {gameState === 'Won' && <ParticleEffect />}
       </div>
 
-      {/* ... Modals ... */}
       {isNewGameModalOpen && (
         <NewGameModal
           isOpen={isNewGameModalOpen}
@@ -474,15 +501,18 @@ function App() {
           onStartNewGame={handleStartGameFromModal}
         />
       )}
-
+      
+      {/* {cellContextMenu.visible && console.log("Rendering CellContextMenu with state:", JSON.stringify(cellContextMenu))} */}
       {cellContextMenu.visible && (
         <CellContextMenu
           key={cellContextMenu.instanceKey}
           x={cellContextMenu.x}
           y={cellContextMenu.y}
           gridSize={gridSize}
-          onSelectValue={handleSelectValueFromContextMenu}
+          onSelectValue={handleSelectValueFromContextMenu} // This will receive the non-memoized version
           onClose={handleCloseCellContextMenu}
+          isFilteringEnabled={cellContextMenu.isFilteringActiveForMenu} 
+          validNumbersList={cellContextMenu.validNumbersForMenu}
         />
       )}
     </div>

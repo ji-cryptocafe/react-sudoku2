@@ -67,11 +67,11 @@ export function solveSudoku(board) {
 export function generateNewPuzzle(gridSize, difficultyLevel) {
   const subgridSize = Math.sqrt(gridSize);
   if (!Number.isInteger(subgridSize) || ![4, 9, 16].includes(gridSize)) {
-    console.error('Invalid grid size for Sudoku. Must be 4, 9, or 16.');
-    // Return a default empty puzzle to avoid crashing
-    const errorBoard = Array(9)
+    console.error(`Invalid grid size for Sudoku: ${gridSize}. Must be 4, 9, or 16.`);
+    // Fallback to a correctly sized empty board using the provided gridSize
+    const errorBoard = Array(gridSize) // Use the provided gridSize
       .fill(null)
-      .map(() => Array(9).fill(EMPTY_CELL_VALUE));
+      .map(() => Array(gridSize).fill(EMPTY_CELL_VALUE)); // Use the provided gridSize
     return {
       initialBoard: deepCopy(errorBoard),
       solution: deepCopy(errorBoard),
@@ -81,22 +81,26 @@ export function generateNewPuzzle(gridSize, difficultyLevel) {
   let solution = Array(gridSize)
     .fill(null)
     .map(() => Array(gridSize).fill(EMPTY_CELL_VALUE));
+
   if (!solveSudoku(solution)) {
     console.error(
       'Failed to generate a solvable Sudoku base for size ' + gridSize
     );
-    // Fallback: Create a simple pattern (not a valid Sudoku for playing)
-    for (let r = 0; r < gridSize; r++)
-      for (let c = 0; c < gridSize; c++) solution[r][c] = (r + c) % gridSize;
+    // Fallback: Create a simple pattern (not a valid Sudoku for playing but prevents crash)
+    // Re-initialize to ensure correct dimensions if solveSudoku somehow modified it badly
+    solution = Array(gridSize).fill(null).map(() => Array(gridSize).fill(EMPTY_CELL_VALUE));
+    for (let r = 0; r < gridSize; r++) {
+      for (let c = 0; c < gridSize; c++) {
+        solution[r][c] = (r + c) % gridSize; // Simple pattern
+      }
+    }
   }
 
   let initialBoard = deepCopy(solution);
-
   let cellsToRemove = 0;
   const totalCells = gridSize * gridSize;
   let targetClues;
 
-  // Difficulty logic (simplified for brevity, similar to original)
   if (difficultyLevel === 'Ultra') {
     if (gridSize === 16) targetClues = 55;
     else if (gridSize === 9) targetClues = 17;
@@ -106,39 +110,23 @@ export function generateNewPuzzle(gridSize, difficultyLevel) {
     let removalPercentage;
     if (gridSize === 16) {
       switch (difficultyLevel) {
-        case 'Easy':
-          removalPercentage = 0.5;
-          break;
-        default:
-          removalPercentage = 0.6;
+        case 'Easy': removalPercentage = 0.5; break;
+        default: removalPercentage = 0.6;
       }
     } else if (gridSize === 9) {
       switch (difficultyLevel) {
-        case 'Easy':
-          removalPercentage = 0.48;
-          break;
-        case 'Medium':
-          removalPercentage = 0.58;
-          break;
-        default:
-          removalPercentage = 0.66;
+        case 'Easy': removalPercentage = 0.48; break;
+        case 'Medium': removalPercentage = 0.58; break;
+        default: removalPercentage = 0.66;
       }
-    } else {
-      // 4x4
+    } else { // 4x4
       switch (difficultyLevel) {
-        case 'Easy':
-          removalPercentage = 0.35;
-          break;
-        case 'Medium':
-          removalPercentage = 0.5;
-          break;
-        default:
-          removalPercentage = 0.6;
+        case 'Easy': removalPercentage = 0.35; break;
+        case 'Medium': removalPercentage = 0.5; break;
+        default: removalPercentage = 0.6;
       }
     }
     targetClues = totalCells - Math.floor(totalCells * removalPercentage);
-
-    // Ensure minimum clues
     let minCluesMap = { 4: 5, 9: 22, 16: 60 };
     targetClues = Math.max(
       targetClues,
@@ -153,10 +141,8 @@ export function generateNewPuzzle(gridSize, difficultyLevel) {
 
   let removedCount = 0;
   let attempts = 0;
-  const maxAttempts = totalCells * 10; // Simplified max attempts
+  const maxAttempts = totalCells * 10;
 
-  // Random removal - this doesn't guarantee a unique solution for the puzzle.
-  // A robust generator would check uniqueness after each removal.
   while (removedCount < cellsToRemove && attempts < maxAttempts) {
     const r = Math.floor(Math.random() * gridSize);
     const c = Math.floor(Math.random() * gridSize);
@@ -166,7 +152,6 @@ export function generateNewPuzzle(gridSize, difficultyLevel) {
     }
     attempts++;
   }
-  // console.log(`Generated ${gridSize}x${gridSize} puzzle (${difficultyLevel}). Clues: ${totalCells - removedCount}`);
   return { initialBoard, solution };
 }
 
@@ -189,4 +174,76 @@ export function checkUserSolution(userBoard, solutionBoard) {
     }
   }
   return { isComplete, isCorrect };
+}
+
+
+// MODIFIED FUNCTION: Get numbers present in the cell's row, column, and subgrid (peers)
+export function getInvalidNumbersInPeers(board, row, col, gridSize) {
+  const invalidNumbers = new Set();
+  const subgridSize = Math.sqrt(gridSize);
+
+  // Ensure board and relevant rows are defined
+  if (!board || board.length !== gridSize) {
+    console.error("getInvalidNumbersInPeers: Invalid board provided or board not ready.");
+    return invalidNumbers; // Return empty set to prevent further errors
+  }
+
+
+  // Check Row (excluding the cell itself)
+  if (board[row]) { // Check if the row exists
+    for (let c_ = 0; c_ < gridSize; c_++) {
+      if (c_ !== col && board[row][c_] !== EMPTY_CELL_VALUE) {
+        invalidNumbers.add(board[row][c_]);
+      }
+    }
+  } else {
+    console.warn(`getInvalidNumbersInPeers: Row ${row} is undefined.`);
+  }
+
+
+  // Check Column (excluding the cell itself)
+  for (let r_ = 0; r_ < gridSize; r_++) {
+    if (board[r_]) { // Check if this row exists
+        if (r_ !== row && board[r_][col] !== EMPTY_CELL_VALUE) {
+        invalidNumbers.add(board[r_][col]);
+        }
+    } else {
+        console.warn(`getInvalidNumbersInPeers: Row ${r_} for column check is undefined.`);
+    }
+  }
+
+  // Check Subgrid (excluding the cell itself)
+  const startRow = Math.floor(row / subgridSize) * subgridSize;
+  const startCol = Math.floor(col / subgridSize) * subgridSize;
+  for (let r_offset = 0; r_offset < subgridSize; r_offset++) {
+    for (let c_offset = 0; c_offset < subgridSize; c_offset++) {
+      const checkRow = startRow + r_offset;
+      const checkCol = startCol + c_offset;
+      
+      if (board[checkRow]) { // Check if this subgrid row exists
+        if ((checkRow !== row || checkCol !== col) && board[checkRow][checkCol] !== EMPTY_CELL_VALUE) {
+          invalidNumbers.add(board[checkRow][checkCol]);
+        }
+      } else {
+        console.warn(`getInvalidNumbersInPeers: Row ${checkRow} for subgrid check is undefined.`);
+      }
+    }
+  }
+  return invalidNumbers; // Set of 0-indexed numbers
+}
+
+// NEW FUNCTION: Get valid numbers (0-indexed) that can be placed in a cell
+export function getValidNumbersForCell(board, row, col, gridSize) {
+  const allPossibleNumbers = Array.from({ length: gridSize }, (_, i) => i); // 0 to gridSize-1
+  
+  // Add a guard here too for the board
+  if (!board || board.length !== gridSize || !board[row] || board[row][col] === undefined) {
+    console.warn("getValidNumbersForCell: Board not fully ready or cell invalid. Returning all numbers.");
+    return allPossibleNumbers; // Fallback: consider all numbers valid to prevent crash
+  }
+
+  const invalidPeerNumbers = getInvalidNumbersInPeers(board, row, col, gridSize);
+  
+  const validNumbers = allPossibleNumbers.filter(num => !invalidPeerNumbers.has(num));
+  return validNumbers; // Returns an array of valid 0-indexed numbers
 }
