@@ -247,3 +247,57 @@ export function getValidNumbersForCell(board, row, col, gridSize) {
   const validNumbers = allPossibleNumbers.filter(num => !invalidPeerNumbers.has(num));
   return validNumbers; // Returns an array of valid 0-indexed numbers
 }
+
+// NEW FUNCTION: Find all empty cells in the board
+export function findAllEmptyCells(board) {
+  const emptyCells = [];
+  const gridSize = board.length;
+  if (!board || gridSize === 0) return emptyCells;
+
+  for (let r = 0; r < gridSize; r++) {
+    if (!board[r]) continue; // Skip if row is undefined
+    for (let c = 0; c < gridSize; c++) {
+      if (board[r][c] === EMPTY_CELL_VALUE) {
+        emptyCells.push({ row: r, col: c });
+      }
+    }
+  }
+  return emptyCells;
+}
+
+// NEW FUNCTION: Get candidates for hints
+// This will find empty cells and count their valid possibilities based on the CURRENT userBoard.
+export function getHintCandidates(userBoard, gridSize) {
+  const emptyCells = findAllEmptyCells(userBoard);
+  const candidates = [];
+
+  if (!userBoard || userBoard.length !== gridSize) {
+    console.error("getHintCandidates: Invalid userBoard provided.");
+    return [];
+  }
+
+  for (const cell of emptyCells) {
+    // IMPORTANT: For hint candidates, we need to know possibilities based on the *current* state of userBoard
+    const validMoves = getValidNumbersForCell(userBoard, cell.row, cell.col, gridSize);
+    if (validMoves.length > 0) { // Only consider cells that still have possible moves
+        candidates.push({
+            row: cell.row,
+            col: cell.col,
+            possibilitiesCount: validMoves.length,
+            // Optional: store the actual validMoves if needed for advanced hints later
+            // validMoves: validMoves 
+        });
+    }
+  }
+
+  // Sort candidates: fewer possibilities = easier = higher priority
+  candidates.sort((a, b) => a.possibilitiesCount - b.possibilitiesCount);
+
+  return candidates;
+}
+
+// NEW FUNCTION: Get the top N hints
+export function getTopHints(userBoard, gridSize, numberOfHints = 3) {
+  const candidates = getHintCandidates(userBoard, gridSize);
+  return candidates.slice(0, numberOfHints); // Returns array of {row, col, possibilitiesCount}
+}

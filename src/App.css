@@ -501,3 +501,33 @@ body {
   box-shadow: inset 0 1px 2px rgba(0,0,0,0.05) !important;
 }
  
+/* Style for hinted cells */
+.hinted-cell-indicator {
+  /* Example: a subtle glowing border or background pulse */
+  /* Ensure it doesn't conflict too much with selection/hover */
+  box-shadow: 0 0 10px 3px rgba(76, 175, 80, 0.7) !important; /* Greenish glow */
+  /* Or a distinct border: */
+  /* border: 2px dashed #4CAF50 !important; */
+  /* outline: 2px dashed #4CAF50; */
+  /* outline-offset: -2px; */
+  z-index: 15 !important; /* Ensure it's visible */
+}
+
+/* If applying to FlippingCell faces specifically */
+.flipping-cell-face.hinted-cell-indicator-face {
+  /* Similar styles as above, but applied to the face */
+  box-shadow: inset 0 0 8px 2px rgba(76, 175, 80, 0.6);
+}
+
+
+/* Sidebar Button Styling - Add disabled state for hint button */
+.sidebar-button:disabled,
+.sidebar-button.disabled { /* Add .disabled class for manual disabling if needed */
+  opacity: 0.5;
+  cursor: not-allowed;
+  background: linear-gradient(to bottom, #e0e0e0 0%, #d0d0d0 100%) !important; /* More distinct disabled */
+  border-color: #c0c0c0 !important;
+  color: #888 !important;
+  box-shadow: inset 0 1px 2px rgba(0,0,0,0.1) !important;
+  transform: none !important;
+}

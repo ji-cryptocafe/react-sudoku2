@@ -23,6 +23,7 @@ function FlippingCell({
     isLocked,
     onToggleLock,
     gameState,
+    isHinted,
 }) {
     const isClue = initialValue !== EMPTY_CELL_VALUE;
     const currentValue = isClue ? initialValue : userValue; // The "true" current value based on props
@@ -82,7 +83,18 @@ function FlippingCell({
     }, [userValue, initialValue, isClue, frontFaceValue, backFaceValue, gameState]); // Added states to deps for sync logic
     // Note: Adding front/backFaceValue to deps ensures the sync logic in the 'else' runs if needed.
 
+    // Moved outerWrapperClasses declaration here, before getFaceClasses if it were to use it.
+    // But getFaceClasses does not need it.
+    let outerWrapperClasses = 'flipping-cell-outer-wrapper';
+    if (isHovered) outerWrapperClasses += ' hovered-cell';
+    if (isRowHovered && !isHovered) outerWrapperClasses += ' highlight-row';
+    if (isColHovered && !isHovered) outerWrapperClasses += ' highlight-col';
+    if (isSubgridHovered && !isHovered) outerWrapperClasses += ' highlight-subgrid';
 
+
+    if (isHinted && !isClue && userValue === EMPTY_CELL_VALUE) { // Only show hint indicator on empty, non-clue cells
+        outerWrapperClasses += ' hinted-cell-indicator'; 
+    }
     // --- Rendering logic remains largely the same, but uses frontFaceValue/backFaceValue ---
 
     const getFaceClasses = (isFront) => {
@@ -96,6 +108,10 @@ function FlippingCell({
         if (row === 0) classes += ' first-row-face';
         if (col === 0) classes += ' first-col-face';
         classes += isFront ? ' flipping-cell-face-front' : ' flipping-cell-face-back';
+        // Optionally, if you want the face itself to change style for hinted cells:
+        if (isHinted && !isClue && (isFront ? frontFaceValue : backFaceValue) === EMPTY_CELL_VALUE) {
+            classes += ' hinted-cell-indicator-face'; 
+        }
         return classes;
     };
 
@@ -173,12 +189,7 @@ function FlippingCell({
         }
     };
 
-    // --- Outer wrapper and JSX structure remain the same ---
-      let outerWrapperClasses = 'flipping-cell-outer-wrapper';
-      if (isHovered) outerWrapperClasses += ' hovered-cell';
-      if (isRowHovered && !isHovered) outerWrapperClasses += ' highlight-row';
-      if (isColHovered && !isHovered) outerWrapperClasses += ' highlight-col';
-      if (isSubgridHovered && !isHovered) outerWrapperClasses += ' highlight-subgrid';
+    
 
       const handleOuterClick = () => { if (!isClue && onClick) onClick(); };
       const canShowLock = !isClue && userValue !== EMPTY_CELL_VALUE && gameState === 'Playing';

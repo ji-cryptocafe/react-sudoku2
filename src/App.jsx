@@ -11,6 +11,7 @@ import {
   generateNewPuzzle,
   checkUserSolution as checkUserSolutionLogic,
   getValidNumbersForCell,
+  getTopHints,
 } from './logic/sudokuLogic';
 import { EMPTY_CELL_VALUE, GRID_SIZES, DIFFICULTIES } from './logic/constants';
 import { deepCopy, getInternalValueFromKey } from './logic/utils';
@@ -35,6 +36,10 @@ function App() {
   const [cellTypesBoard, setCellTypesBoard] = useState([]);
   
   const [isFilteringEnabled, setIsFilteringEnabled] = useState(false);
+
+  // NEW STATES FOR HINTS
+  const [hintedCells, setHintedCells] = useState([]); // Array of {row, col}
+  const [hintUsesLeft, setHintUsesLeft] = useState(1); // Start with 1 use
 
   const {
     elapsedTime,
@@ -69,9 +74,12 @@ function App() {
     setSolutionBoard(puzzle.solution);
     setUserBoard(deepCopy(puzzle.initialBoard));
 
+    setHintedCells([]); // Reset hinted cells on new game
+    setHintUsesLeft(1); // Reset hint uses on new game
+
     const newCellTypesBoard = Array(gridSize)
       .fill(null)
-      .map(() => Array(gridSize).fill('standard'));
+      .map(() => Array(gridSize).fill('flipping'));
     setCellTypesBoard(newCellTypesBoard);
 
     setLockedCells([]);
@@ -211,6 +219,28 @@ function App() {
       closeAllPopups,
     ]
   );
+
+  // NEW HANDLER for Hint Button
+  const handleRequestHint = useCallback(() => {
+    if (gameState !== 'Playing' || hintUsesLeft <= 0 || hintedCells.length > 0) {
+      // Don't give hint if game not playing, no uses left, or hints already shown this turn
+      return;
+    }
+
+    // IMPORTANT: Pass the current userBoard to get hints based on user's progress
+    const topHints = getTopHints(userBoard, gridSize, 3); 
+    
+    if (topHints.length > 0) {
+      setHintedCells(topHints.map(h => ({ row: h.row, col: h.col }))); // Store only row and col
+      setHintUsesLeft(prev => prev - 1);
+      // The visual indication will be handled by passing `hintedCells` to SudokuGrid
+      // And then to individual cell components.
+      // Hints are static for this click; they don't update further.
+    } else {
+      setGameMessage("No obvious hints available or board complete!"); // Or some other message
+      // Optionally, don't decrement hintUsesLeft if no hints were found.
+    }
+  }, [gameState, hintUsesLeft, userBoard, gridSize, hintedCells.length]); // Added hintedCells.length dependency
 
   const handleCloseCellContextMenu = useCallback(() => {
     closeContextMenuAction();
@@ -448,7 +478,15 @@ function App() {
               >
                 Filt
               </button>
-              <button className="sidebar-button" aria-label="Upgrade 2">L2</button>
+              <button 
+                className={`sidebar-button ${hintUsesLeft <= 0 || hintedCells.length > 0 ? 'disabled' : ''}`}
+                aria-label="Get Hint"
+                onClick={handleRequestHint}
+                disabled={hintUsesLeft <= 0 || gameState !== 'Playing' || hintedCells.length > 0}
+                title={`Get a hint (${hintUsesLeft} left)`}
+              >
+                Hnt {hintUsesLeft > 0 ? `(${hintUsesLeft})` : ''}
+              </button>
               <button className="sidebar-button" aria-label="Upgrade 3">L3</button>
             </div>
 
@@ -475,6 +513,7 @@ function App() {
                     gameState={gameState}
                     lockedCells={lockedCells}
                     onToggleLock={handleToggleLockCell}
+                    hintedCells={hintedCells} 
                   />
                 )}
               </div>

@@ -17,6 +17,7 @@ function SudokuGrid({
   gameState,
   lockedCells,
   onToggleLock,
+  hintedCells,
 }) {
   // Robust check: If boards aren't ready, don't attempt to render cells
   if (
@@ -48,6 +49,7 @@ function SudokuGrid({
       // Determine which component to render for this cell
       const cellType = (cellTypesBoard[r] && cellTypesBoard[r][c]) ? cellTypesBoard[r][c] : 'standard';
       const CellComponentToRender = cellComponentMap[cellType] || DefaultCellComponent;
+      const isHinted = hintedCells.some(hc => hc.row === r && hc.col === c);
 
       cells.push(
         <CellComponentToRender // DYNAMICALLY RENDER THE COMPONENT
@@ -61,6 +63,7 @@ function SudokuGrid({
           isHovered={hoveredCell?.row === r && hoveredCell?.col === c}
           isRowHovered={hoveredCell?.row === r} // Pass these down
           isColHovered={hoveredCell?.col === c} // Pass these down
+          isHinted={isHinted}
           isSubgridHovered={ // Pass these down
             hoveredCell &&
             Math.floor(r / subgridSize) ===

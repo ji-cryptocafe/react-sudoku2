@@ -23,6 +23,7 @@ function Cell({ // Component name is Cell as per your previous structure
   isLocked,
   onToggleLock, // Prop from SudokuGrid, expects to be called as: func()
   gameState,
+  isHinted,
 }) {
   const subgridSize = Math.sqrt(gridSize);
   const isClue = initialValue !== EMPTY_CELL_VALUE;
@@ -127,6 +128,11 @@ function Cell({ // Component name is Cell as per your previous structure
     }
   };
 
+  // Add hinted class if applicable
+  if (isHinted && !isClue && userValue === EMPTY_CELL_VALUE) { // Only show hint indicator on empty, non-clue cells
+    mainClass += ' hinted-cell-indicator';
+  }
+  
   return (
     <div
       className={mainClass}

@@ -7,4 +7,4 @@ export const cellComponentMap = {
   flipping: FlippingCell, // NEW TYPE
 };
 
-export const DefaultCellComponent = StandardCell; // MAKE FLIPPING THE DEFAULT
+export const DefaultCellComponent = FlippingCell; // MAKE FLIPPING THE DEFAULT
