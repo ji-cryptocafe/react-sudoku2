@@ -85,7 +85,7 @@ function MorphingCell({
   const cellStyle = {
     borderTop: row === 0 ? 'none' : undefined,
     borderLeft: col === 0 ? 'none' : undefined,
-    fontSize: `${(450 / gridSize) * (gridSize === 16 ? 0.45 : 0.5)}px`,
+    fontSize: `${(450 / gridSize) * (gridSize === 16 ? 0.6 : 0.7)}px`,
   };
 
   const handleLockClick = (event) => {

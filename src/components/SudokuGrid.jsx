@@ -87,20 +87,23 @@ function SudokuGrid({
     }
   }
 
+  // REMOVE fixed width/height from inline style. Styling will be controlled by CSS.
   const gridStyle = {
     display: 'grid',
     gridTemplateColumns: `repeat(${gridSize}, 1fr)`,
     gridTemplateRows: `repeat(${gridSize}, 1fr)`,
-    width: '450px',
-    height: '450px',
-    border: '2px solid #333',
-    position: 'relative',
+    // width: '450px', // REMOVED
+    // height: '450px', // REMOVED
+    border: '2px solid #333', // This can stay or move to CSS
+    position: 'relative', // Good for stacking contexts if needed
+    // Add aspect-ratio here or in CSS for the container
+    // aspectRatio: '1 / 1', // This ensures it stays square
   };
 
   return (
     <div
-      style={gridStyle}
-      className="sudoku-grid"
+      style={gridStyle} // gridStyle no longer contains fixed width/height
+      className="sudoku-grid" // CSS will target this class
       onMouseLeave={() => setHoveredCell(null)}
     >
       {cells}

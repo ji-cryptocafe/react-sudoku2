@@ -6,7 +6,7 @@ import {
   getValidNumbersForCell,
   getTopHints,
 } from '../logic/sudokuLogic';
-import { EMPTY_CELL_VALUE } from '../logic/constants';
+import { EMPTY_CELL_VALUE, GRID_SIZES } from '../logic/constants';
 import { deepCopy } from '../logic/utils';
 
 export const useSudokuGame = (initialGridSize, initialDifficulty) => {
@@ -51,7 +51,7 @@ export const useSudokuGame = (initialGridSize, initialDifficulty) => {
 
     const newCellTypesBoard = Array(gridSize) // Use hook's current state
       .fill(null)
-      .map(() => Array(gridSize).fill('flipping'));
+      .map(() => Array(gridSize).fill('morphing'));
     setCellTypesBoard(newCellTypesBoard);
 
     setLockedCells([]);
@@ -180,14 +180,35 @@ export const useSudokuGame = (initialGridSize, initialDifficulty) => {
     if (gameState !== 'Playing' || hintUsesLeft <= 0 || hintedCells.length > 0) {
       return;
     }
-    const topHints = getTopHints(userBoard, gridSize, 3); // Use hook's gridSize
+
+    // Determine the number of hints based on gridSize
+    let numberOfHintsToGet;
+    switch (gridSize) {
+      case GRID_SIZES.S4:
+        numberOfHintsToGet = 1;
+        break;
+      case GRID_SIZES.S9:
+        numberOfHintsToGet = 3;
+        break;
+      case GRID_SIZES.S16:
+        numberOfHintsToGet = 5;
+        break;
+      default:
+        numberOfHintsToGet = 3; // Default for any other unexpected size
+    }
+
+    const topHints = getTopHints(userBoard, gridSize, numberOfHintsToGet); // Pass dynamic number
+    
     if (topHints.length > 0) {
       setHintedCells(topHints.map((h) => ({ row: h.row, col: h.col })));
       setHintUsesLeft((prev) => prev - 1);
     } else {
       setGameMessage('No obvious hints available or board complete!');
+      // Optionally, don't decrement hintUsesLeft if no hints were found,
+      // or if topHints.length < numberOfHintsToGet (meaning fewer than requested were found)
+      // For now, it decrements if any hint is given.
     }
-  }, [gameState, hintUsesLeft, userBoard, gridSize, hintedCells.length]);
+  }, [gameState, hintUsesLeft, userBoard, gridSize, hintedCells.length, gameMessage]); // Added gameMessage to deps for setGameMessage
 
   return {
     gridSize,

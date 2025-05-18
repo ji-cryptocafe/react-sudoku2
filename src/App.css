@@ -1,183 +1,230 @@
+/* src/App.css */
+
 /* General Body and App Container */
 body {
+  margin: 0; /* Ensure margin is reset */
   display: flex;
   flex-direction: column;
-  justify-content: flex-start; /* Align to top for scroll if content exceeds viewport */
-  align-items: center;
+  /* justify-content: flex-start; /* Good for content starting at the top */
+  align-items: center; /* This will center #root horizontally if #root doesn't have width 100% */
   min-height: 100vh;
   background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
   font-family: 'Helvetica Neue', Arial, sans-serif;
-  margin: 0;
-  padding: 20px 0;
+  padding: 20px 0; /* Your app padding */
   box-sizing: border-box;
+  overflow-x: hidden;
+}
+
+#root { /* Ensure #root takes full width if body is aligning it center */
+    width: 100%;
+    display: flex; /* If you want App.jsx to be centered within root */
+    flex-direction: column;
+    align-items: center;
+    flex-grow: 1;
 }
 
 .app-container {
   display: flex;
+  flex-grow: 1;
   flex-direction: column;
-  align-items: center;
-  width: 100%;
-  max-width: 1200px; /* Max width for the whole app */
-  gap: 15px; /* Space between major sections */
-  position: relative; /* For stacking context of modal */
+  align-items: center; /* This centers content *within* app-container */
+  width: 100%; /* Takes full width of its parent (#root) */
+  max-width: 1200px; /* Overall app constraint */
+  gap: 15px;
+  position: relative; 
 }
 
 /* Top Bar Styling */
 #top-bar {
   display: flex;
-  justify-content: space-between; 
+  justify-content: space-between;
   align-items: center;
   width: 100%;
-  /* SudokuGrid is 450px wide + 2px border each side = 454px. 
-     #top-bar will be centered above this part of the game area by default if its parent is wider.
-     If #play-area-wrapper (canvas + sidebars) is wider than 454px, this will look fine.
-     Let's set its max-width to be similar to the canvas part for alignment,
-     or allow it to span wider if game-area content makes sense.
-     For now, matching the old behavior for consistency. */
-  max-width: 454px;
-  padding: 0; 
-  margin-bottom: 15px; 
+  max-width: 90vw; /* Make top-bar responsive with game-area */
+  /* max-width: 600px; /* Or a fixed max if preferred */
+  padding: 0 10px; /* Add some padding if it's full width */
+  margin-bottom: 15px;
   box-sizing: border-box;
 }
 
 #top-bar-controls {
   display: flex;
-  gap: 10px; 
-  flex-grow: 1; 
+  gap: 10px;
+  flex-grow: 1;
 }
 
 #top-bar .glossy-button {
-  padding: 10px 15px; 
-  font-size: 0.9em;   
-  flex-grow: 1;       
-  min-width: 0;       
+  padding: 10px 15px;
+  font-size: 0.9em;
+  flex-grow: 1;
+  min-width: 0;
   text-align: center;
 }
 
-.timer-display { 
-  font-size: 0.9em; 
-  font-weight: 400; /* Was 600 in one definition, 400 in another. Using 400 to match top-bar specific style. */
+.timer-display {
+  font-size: 0.9em;
+  font-weight: 400;
   color: #333;
-  padding: 10px 15px; 
+  padding: 10px 15px;
   background-color: rgba(255, 255, 255, 0.9);
-  border-radius: 20px; 
+  border-radius: 20px;
   box-shadow: 0 3px 6px rgba(0, 0, 0, 0.08);
-  margin-left: 10px; 
-  white-space: nowrap; 
-  flex-shrink: 0; 
+  margin-left: 10px;
+  white-space: nowrap;
+  flex-shrink: 0;
 }
 
-/* Game Area (Sudoku Grid + Message) */
+/* Game Area */
 #game-area {
   display: flex;
   flex-direction: column;
   align-items: center;
   gap: 15px;
   background-color: rgba(255, 255, 255, 0.75);
-  padding: 20px; 
+  padding: 20px;
   border-radius: 15px;
   box-shadow: 0 8px 25px rgba(0, 0, 0, 0.1);
-  width: 100%;
-  /* Updated max-width to accommodate sidebars and canvas
-     Canvas (450px) + Left Sidebar (50px) + Right Sidebar (50px) + Gaps (2 * 10px) = 570px
-     Total content width for play-area-wrapper = 570px.
-     Game area padding (20px left + 20px right) = 40px.
-     New max-width for #game-area = 570px + 40px = 610px.
-  */
-  max-width: 610px; 
-  box-sizing: border-box;
+  width: 100%; /* Takes width from app-container */
+  /* max-width: 90vw; /* Keep this as an overall constraint for the game area */
+  max-width: 1024px; /* OR a more generous fixed max-width for desktop */
+  box-sizing: border-box; 
+  flex-grow: 1;
+  min-height: 0; 
 }
 
-/* NEW: Play Area Wrapper for Sidebars and Canvas */
 #play-area-wrapper {
   display: flex;
-  justify-content: center; /* Center items if they don't fill the space */
-  align-items: flex-start; /* Align items to the top; sidebars will match canvas height */
-  gap: 10px; /* Space between sidebars and main canvas area */
-  width: 100%;
-  max-width: 570px; /* Fixed width: 50px (L-sidebar) + 10px (gap) + 450px (canvas) + 10px (gap) + 50px (R-sidebar) */
+  justify-content: center; /* Center its content (sidebars + canvas-main) */
+  align-items: stretch;   /* Make sidebars and canvas-main stretch to tallest */
+  gap: 10px;
+  width: 100%; /* Fill #game-area */
+  flex-grow: 1;
+  min-height: 0;
 }
 
-/* NEW: Sidebar Styling */
 .sidebar {
   display: flex;
   flex-direction: column;
-  justify-content: space-around; /* Evenly distribute buttons vertically */
-  align-items: center; /* Center buttons horizontally */
-  width: 50px; /* Fixed width for sidebar */
-  height: 450px; /* Match the height of the SudokuGrid/canvas-container */
-  padding: 10px 0; /* Vertical padding for buttons */
+  justify-content: space-around;
+  align-items: center;
+  width: 50px;
+  padding: 10px 0;
   box-sizing: border-box;
-  /* Optional: add a subtle background or border if desired */
-  /* background-color: rgba(0,0,0,0.02); */
-  /* border-radius: 8px; */
+  flex-shrink: 0;
+  /* background-color: #eee; /* For debugging layout */
 }
 
-/* NEW: Sidebar Button Styling (Circular, Apple-style glossy) */
 .sidebar-button {
   width: 44px;
   height: 44px;
-  border-radius: 50%; /* Circular */
-  padding: 0; /* Remove padding, use flex to center content */
+  border-radius: 50%;
+  padding: 0;
   display: flex;
   justify-content: center;
   align-items: center;
-  font-size: 13px; /* Adjust as needed for icons or short text */
+  font-size: 13px;
   font-weight: 600;
-  color: #444; /* Darker text for better contrast on light button */
-  text-shadow: 0 1px 0 rgba(255, 255, 255, 0.6); /* Subtle text highlight */
+  color: #444;
+  text-shadow: 0 1px 0 rgba(255, 255, 255, 0.6);
   cursor: pointer;
-  background: linear-gradient(to bottom, #ffffff 0%, #f3f3f3 100%); /* Glossy background */
-  border: 1px solid #cccccc; /* Slightly softer border */
-  box-shadow: 0 2px 3px rgba(0, 0, 0, 0.08), /* Softer outer shadow */
-              inset 0 1px 1px rgba(255, 255, 255, 0.8), /* Inner top highlight */
-              inset 0 -1px 1px rgba(0, 0, 0, 0.03); /* Subtle inner bottom shadow */
+  background: linear-gradient(to bottom, #ffffff 0%, #f3f3f3 100%);
+  border: 1px solid #cccccc;
+  box-shadow: 0 2px 3px rgba(0, 0, 0, 0.08),
+    inset 0 1px 1px rgba(255, 255, 255, 0.8),
+    inset 0 -1px 1px rgba(0, 0, 0, 0.03);
   transition: all 0.2s ease-out;
   outline: none;
 }
-
 .sidebar-button:hover {
-  background: linear-gradient(to bottom, #ffffff 0%, #e9e9e9 100%); /* Slightly darker on hover */
+  background: linear-gradient(to bottom, #ffffff 0%, #e9e9e9 100%);
   border-color: #bbbbbb;
   box-shadow: 0 3px 5px rgba(0, 0, 0, 0.1),
-              inset 0 1px 1px rgba(255, 255, 255, 0.8),
-              inset 0 -1px 1px rgba(0, 0, 0, 0.03);
-  /* transform: translateY(-1px); Optional: lift effect */
+    inset 0 1px 1px rgba(255, 255, 255, 0.8),
+    inset 0 -1px 1px rgba(0, 0, 0, 0.03);
 }
-
 .sidebar-button:active {
-  background: linear-gradient(to top, #ffffff 0%, #e9e9e9 100%); /* Inverted gradient for pushed feel */
-  box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.15), /* Stronger inner shadow */
-              0 1px 0 rgba(255,255,255,0.7); /* Remove lift, ensure it looks pressed */
-  transform: translateY(1px); /* Push down effect */
+  background: linear-gradient(to top, #ffffff 0%, #e9e9e9 100%);
+  box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.15),
+    0 1px 0 rgba(255,255,255,0.7);
+  transform: translateY(1px);
   color: #333;
 }
-
-
-/* Wrapper for the main canvas area, sits between sidebars */
-#canvas-container-main {
-  width: 450px; /* To contain the 450px wide SudokuGrid */
-  height: 450px; /* Match SudokuGrid height */
-  display: flex; /* To center #canvas-container if it were smaller, though it's exact fit */
-  justify-content: center;
-  align-items: center;
-  flex-shrink: 0; /* Prevent shrinking if #play-area-wrapper is too constrained */
+.sidebar-button.active {
+  background: linear-gradient(to bottom, #a0ddff 0%, #6cace0 100%);
+  border-color: #5a99cf;  color: #002244;
+  box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.2), 0 1px 0 rgba(255,255,255,0.6);
+  font-weight: 700;
+}
+.sidebar-button.active:hover {
+  background: linear-gradient(to bottom, #90cff0 0%, #5c9bd1 100%);
+}
+.sidebar-button:disabled,
+.sidebar-button.disabled {
+  opacity: 0.5; cursor: not-allowed;
+  background: linear-gradient(to bottom, #e0e0e0 0%, #d0d0d0 100%) !important;
+  border-color: #c0c0c0 !important; color: #888 !important;
+  box-shadow: inset 0 1px 2px rgba(0,0,0,0.1) !important;
+  transform: none !important;
 }
 
-/* #canvas-container holds the SudokuGrid component directly */
+#canvas-container-main {
+  flex-grow: 1; /* IMPORTANT: This will take up remaining space in #play-area-wrapper */
+  min-width: 0; /* Allow it to shrink if necessary, preventing overflow */
+  display: flex;
+  justify-content: center; /* Center #canvas-container within it */
+  align-items: center;   /* Center #canvas-container within it */
+  /* background-color: #ddd; /* Debug */
+}
+
 #canvas-container {
   position: relative;
-  width: 450px;  /* Fixed width for the canvas that SudokuGrid is in */
-  height: 450px; /* Fixed height */
+  /* Width will be determined by the content (.sudoku-grid) up to a max-width */
+  width: 100%; /* Try to fill #canvas-container-main */
+  max-width: 800px;  /* Max physical size of the grid */
+  /* height will be driven by .sudoku-grid's aspect-ratio */
+  display: flex; /* Not strictly necessary if .sudoku-grid is block and centered by text-align on parent or margin auto */
+  justify-content: center;
+  align-items: center; 
+}
+
+.sudoku-grid {
+  display: grid;
+  width: 100%; /* Fill #canvas-container */
+  aspect-ratio: 1 / 1;
+  /* max-width: 100%; /* Ensures it doesn't overflow #canvas-container if #canvas-container has a width */
+  border: 2px solid #333;
+  background-color: #fff;
+  user-select: none;
+  box-sizing: border-box;
+}
+
+
+/* Font sizes for grid cells based on grid size class */
+.sudoku-grid.grid-size-4 .cell .value,
+.sudoku-grid.grid-size-4 .flipping-cell-face .value,
+.sudoku-grid.grid-size-4 .morphing-cell .value {
+  font-size: clamp(1.5rem, 8vmin, 3.5rem); /* Responsive font size */
+}
+.sudoku-grid.grid-size-9 .cell .value,
+.sudoku-grid.grid-size-9 .flipping-cell-face .value,
+.sudoku-grid.grid-size-9 .morphing-cell .value {
+  font-size: clamp(1rem, 5vmin, 2.5rem);
+}
+.sudoku-grid.grid-size-16 .cell .value,
+.sudoku-grid.grid-size-16 .flipping-cell-face .value,
+.sudoku-grid.grid-size-16 .morphing-cell .value {
+  font-size: clamp(0.6rem, 3.5vmin, 1.5rem);
+}
+/* Common style for all cell values */
+.sudoku-grid .cell .value,
+.sudoku-grid .flipping-cell-face .value,
+.sudoku-grid .morphing-cell .value {
+  line-height: 1;
   display: flex;
   justify-content: center;
   align-items: center;
-  /* The SudokuGrid component itself has a 2px border making it visually 454px if box-sizing: content-box.
-     If box-sizing: border-box for .sudoku-grid, then it's 450px total.
-     Assuming .sudoku-grid is border-box and its total width is 450px.
-     If SudokuGrid's internal style means it's 450px content + border, then #canvas-container should be 454px.
-     Let's assume SudokuGrid's `width: 450px` includes its border due to global box-sizing.
-  */
+  width: 100%;
+  height: 100%;
 }
 
 
@@ -186,36 +233,13 @@ body {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 20px; 
+  gap: 20px;
   width: 100%;
   transition: filter 0.3s ease-in-out;
 }
-
 #main-content-wrapper.blurred {
   filter: blur(5px);
-  pointer-events: none; 
-}
-
-/* Game Area (Sudoku Grid + Message) - Redundant with above, ensure one definition */
-/* Timer Display - Redundant with above, ensure one definition */
-
-
-#canvas-container canvas {
-  /* Assuming SudokuGrid renders a canvas or a div styled like one */
-  max-width: 100%;
-  max-height: 100%;
-  height: auto; 
-  border-radius: 8px;
-  box-shadow: 0 5px 15px rgba(0, 0, 0, 0.05);
-}
-
-.sudoku-grid {
-  background-color: #fff;
-  user-select: none; 
-  /* width and height for .sudoku-grid are set inline in SudokuGrid.jsx as 450px.
-     Its border (2px solid #333) is also inline style indirectly through the component.
-     If global box-sizing is border-box, this is 450px total.
-  */
+  pointer-events: none;
 }
 
 /* Message Area */
@@ -223,7 +247,7 @@ body {
   width: 100%;
   text-align: center;
   min-height: 30px;
-  font-size: 22px;
+  font-size: clamp(1rem, 3vw, 1.5rem); /* Responsive font size */
   font-weight: bold;
   transition: all 0.3s ease;
   transform: translateZ(0);
@@ -231,40 +255,24 @@ body {
   -moz-osx-font-smoothing: grayscale;
   position: relative;
   z-index: 10;
+  margin-top: 10px;
 }
-#message-area.won {
-  color: #28a745;
-  text-shadow: 0 0 2px rgba(40, 167, 69, 0.5);
-}
-#message-area.failed {
-  color: #dc3545;
-  text-shadow: 0px 0px 2px rgba(220, 53, 69, 0.5);
-}
-#message-area.playing {
-  color: transparent;
-}
+#message-area.won { color: #28a745; text-shadow: 0 0 2px rgba(40, 167, 69, 0.5); }
+#message-area.failed { color: #dc3545; text-shadow: 0px 0px 2px rgba(220, 53, 69, 0.5); }
+#message-area.playing { color: transparent; }
 
-/* Existing Glossy Styles (ensure they are present and potentially tweak if needed) */
-.glossy-button,
-.glossy-select {
-  padding: 10px 18px; 
-  border: 1px solid rgba(0, 0, 0, 0.15);
-  border-radius: 20px; 
-  font-size: 14px;    
-  font-weight: 500;
-  color: #333;
-  cursor: pointer;
+/* Glossy Styles */
+.glossy-button, .glossy-select {
+  padding: 10px 18px; border: 1px solid rgba(0, 0, 0, 0.15);
+  border-radius: 20px; font-size: 14px; font-weight: 500;
+  color: #333; cursor: pointer;
   background: linear-gradient(to bottom, #ffffff 0%, #f1f1f1 100%);
-  box-shadow: 0 2px 3px rgba(0, 0, 0, 0.05),
-    inset 0 1px 0 rgba(255, 255, 255, 0.5);
-  transition: all 0.2s ease-out;
-  outline: none;
+  box-shadow: 0 2px 3px rgba(0, 0, 0, 0.05), inset 0 1px 0 rgba(255, 255, 255, 0.5);
+  transition: all 0.2s ease-out; outline: none;
 }
-.glossy-button:hover,
-.glossy-select:hover {
+.glossy-button:hover, .glossy-select:hover {
   background: linear-gradient(to bottom, #f9f9f9 0%, #e9e9e9 100%);
-  box-shadow: 0 3px 5px rgba(0, 0, 0, 0.08),
-    inset 0 1px 0 rgba(255, 255, 255, 0.5);
+  box-shadow: 0 3px 5px rgba(0, 0, 0, 0.08), inset 0 1px 0 rgba(255, 255, 255, 0.5);
   transform: translateY(-1px);
 }
 .glossy-button:active {
@@ -273,261 +281,167 @@ body {
   transform: translateY(1px);
 }
 .glossy-button:disabled {
-  opacity: 0.6;
-  cursor: not-allowed;
-  background: #e0e0e0;
-  box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.05);
-  transform: none;
+  opacity: 0.6; cursor: not-allowed; background: #e0e0e0;
+  box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.05); transform: none;
 }
 .glossy-select {
-  padding-right: 30px;
-  -webkit-appearance: none;
-  -moz-appearance: none;
+  padding-right: 30px; -webkit-appearance: none; -moz-appearance: none;
   appearance: none;
   background-image: url('data:image/svg+xml;charset=US-ASCII,<svg width="12" height="8" viewBox="0 0 12 8" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M1.41 0.589996L6 5.17L10.59 0.589996L12 2L6 8L0 2L1.41 0.589996Z" fill="%23555"/></svg>');
-  background-repeat: no-repeat;
-  background-position: right 12px center;
+  background-repeat: no-repeat; background-position: right 12px center;
 }
 
-/* Cell and SudokuGrid specific styles (ensure they are compatible) */
-.cell { /* This class is used by StandardCell. FlippingCell has its own structure. */
-  display: flex;
-  flex-direction: column;
-  justify-content: center;
-  align-items: center;
-  cursor: pointer;
-  border: 1px solid #ddd; 
-  box-sizing: border-box;
-  transition: background-color 0.1s ease-in-out;
-  position: relative;
+/* Cell Base and Specific Styles */
+.cell { /* For StandardCell and base for MorphingCell */
+  display: flex; flex-direction: column; justify-content: center; align-items: center;
+  cursor: pointer; border: 1px solid #ddd; box-sizing: border-box;
+  transition: background-color 0.1s ease-in-out; position: relative;
+  opacity:0.7;
+}
+.cell.standard-cell { /* Specific to StandardCell if needed */ }
+.morphing-cell { /* Specific to MorphingCell if needed */ }
+
+.cell.subgrid-border-right, .morphing-cell.subgrid-border-right,
+.flipping-cell-face.subgrid-border-right-face { border-right: 2px solid #555 !important; }
+.cell.subgrid-border-bottom, .morphing-cell.subgrid-border-bottom,
+.flipping-cell-face.subgrid-border-bottom-face { border-bottom: 2px solid #555 !important; }
+
+.cell.clue, .morphing-cell.clue, .flipping-cell-face.clue-face {
+  font-weight: bold; color: #333; background-color: #f0f0f0; cursor: default;
+}
+.cell.user-filled .value, .morphing-cell.user-filled .value,
+.flipping-cell-face .user-filled-text { color: #007bff; font-weight: bold;}
+
+.cell .value.incorrect, .morphing-cell .value.incorrect,
+.flipping-cell-face .value.incorrect { color: #dc3545 !important; text-decoration: line-through; }
+
+.cell .value.hint, .morphing-cell .value.hint,
+.flipping-cell-face .value.hint { color: #28a745 !important; opacity: 1; font-weight: bold; }
+
+.small-hint { /* Applies to all cell types */
+  font-size: 0.6em; /* Smaller relative to dynamic cell font */
+  font-weight: bold; color: #28a745; position: absolute;
+  top: 2px; right: 3px; line-height: 1;
 }
 
-.cell.subgrid-border-right {
-  border-right: 2px solid #555 !important;
+.cell.selected, .morphing-cell.selected,
+.flipping-cell-face.selected-face {
+  outline: 2px solid #007bff; outline-offset: -2px; z-index: 10;
+}
+.cell.selected:not(.clue), .morphing-cell.selected:not(.clue),
+.flipping-cell-face.selected-face:not(.clue-face) {
+    /* ensure selection only on non-clues if that's intended for outline */
 }
 
-.cell.subgrid-border-bottom {
-  border-bottom: 2px solid #555 !important;
+
+.cell.highlight-row, .morphing-cell.highlight-row, .flipping-cell-outer-wrapper.highlight-row .flipping-cell-face:not(.hovered-face),
+.cell.highlight-col, .morphing-cell.highlight-col, .flipping-cell-outer-wrapper.highlight-col .flipping-cell-face:not(.hovered-face),
+.cell.highlight-subgrid, .morphing-cell.highlight-subgrid, .flipping-cell-outer-wrapper.highlight-subgrid .flipping-cell-face:not(.hovered-face) {
+  background-color: rgba(151, 192, 255, 0.2); /* More subtle highlight */
+  opacity:1;
+
+}
+.cell.hovered-cell, .morphing-cell.hovered-cell,
+.flipping-cell-outer-wrapper.hovered-cell .flipping-cell-face {
+  background-color: rgba(104, 195, 255, 0.35); /* More subtle hover */
+  z-index: 5;
+  opacity:1;
 }
 
-.cell.clue {
-  font-weight: bold;
-  color: #333;
-  background-color: #f0f0f0;
-  cursor: default;
+/* Hint Indicator */
+.hinted-cell-indicator {
+  /* Option 1: Make the glow stronger and add an inner component */
+  box-shadow:
+    inset 0 0 3px 1px rgba(121, 210, 125, 0.9), /* Inner subtle highlight */
+    0 0 12px 4px rgba(76, 175, 80, 0.8) !important; /* Outer stronger glow */
+  
+  /* Option 2: A pseudo-border effect using box-shadow */
+  /* box-shadow: 0 0 0 2px #4CAF50 !important; /* This creates a 2px solid green "border" */
+  
+  z-index: 15 !important;
+  /* background-color: rgba(76, 175, 80, 0.1) !important; /* Optional: subtle background tint */
 }
-.cell.user-filled .value {
-  color: #007bff;
+.flipping-cell-face.hinted-cell-indicator-face { /* Specific for flipping face if needed */
+  box-shadow: inset 0 0 8px 2px rgba(76, 175, 80, 0.6) !important;
 }
-.cell .value.incorrect {
-  color: #dc3545;
-  text-decoration: line-through;
+
+
+/* Lock Icon */
+.lock-icon-container {
+  position: absolute; top: 1px; right: 1px;
+  width: 12px; height: 12px; display: flex; justify-content: center; align-items: center;
+  cursor: pointer; font-size: 10px; z-index: 2; user-select: none;
+  transition: opacity 0.2s ease-in-out;
 }
-.cell .value.hint {
-  color: #28a745;
-  opacity: 1;
-  font-weight: bold;
+.lock-icon-container.is-inactive-lock { opacity: 0.3; }
+.lock-icon-container.is-inactive-lock:hover { opacity: 0.7; }
+.lock-icon-container.is-active-lock { opacity: 1; }
+.cell.locked, .morphing-cell.locked, .flipping-cell-face.locked-face {
+  box-shadow: inset 0 0 0 2px #0056b3;
 }
-.small-hint {
-  font-size: 0.8em;
-  font-weight: bold;
-  color: #28a745;
-  position: absolute;
-  top: 2px;
-  right: 3px;
+
+/* Context Menu Disabled Options */
+.cell-context-menu .context-menu-value-button.disabled-context-option {
+  opacity: 0.3; cursor: not-allowed;
+  background: linear-gradient( to bottom, #f0f0f0 0%, #e0e0e0 100% ) !important;
+  color: #999 !important; border-color: #d0d0d0 !important;
+  box-shadow: inset 0 1px 2px rgba(0,0,0,0.05) !important;
+  transform: none !important;
 }
-.cell.selected {
-  outline: 2px solid #007bff;
-  outline-offset: -2px;
-  z-index: 10;
+.cell-context-menu .context-menu-value-button.disabled-context-option:hover {
+  background: linear-gradient( to bottom, #f0f0f0 0%, #e0e0e0 100% ) !important;
+  color: #999 !important; border-color: #d0d0d0 !important;
+  box-shadow: inset 0 1px 2px rgba(0,0,0,0.05) !important;
 }
-/* Highlight and hover styles for .cell were commented out, assuming FlippingCell handles it.
-   If StandardCell is used, these might be needed.
-.cell.highlight-row,
-.cell.highlight-col,
-.cell.highlight-subgrid {
-   background-color: rgba(151, 192, 255, 0.3); 
-}
-.cell.hovered-cell {
-   background-color: rgba(104, 195, 255, 0.6); 
-} 
-*/
 
 /* Responsive Adjustments */
 @media (max-width: 768px) {
-  /* Adjust #game-area and #play-area-wrapper for smaller screens */
-  #game-area {
-    padding: 15px;
-    max-width: 100%; /* Allow full width */
-  }
+  body { padding: 10px 0; }
+  .app-container { gap: 10px; }
+  #game-area { padding: 15px; max-width: 95vw; }
+  #top-bar { max-width: 95vw; padding: 0 5px;}
 
   #play-area-wrapper {
-    flex-direction: column; /* Stack sidebars and canvas */
-    align-items: center; /* Center items when stacked */
-    max-width: 100%;
-    gap: 15px;
+    flex-direction: column; align-items: center; gap: 15px;
   }
-
   .sidebar {
-    flex-direction: row; /* Horizontal buttons in sidebar */
-    width: auto; /* Auto width to fit buttons */
-    max-width: 90vw; /* Max width for sidebars */
-    height: auto; /* Auto height */
-    justify-content: center; /* Center buttons */
-    gap: 10px;
+    flex-direction: row; width: auto; max-width: 90%; height: auto;
+    justify-content: center; gap: 10px; padding: 5px 0;
   }
-  
-  #canvas-container-main,
-  #canvas-container {
-    width: 90vw; 
-    height: 90vw; 
-  }
-  /* SudokuGrid component itself will need to adjust its inline styles for width/height
-     if it's to be responsive. This CSS change only affects its container.
-     The fixed 450px in SudokuGrid.jsx style prop will override this for the grid itself.
-  */
-
-  /* Removed #bottom-controls specific responsive styles as it was removed from HTML */
+  #canvas-container-main { width: 90vw; /* max-width still applies from #canvas-container */ }
+  #canvas-container { max-width: 450px; /* Keep a reasonable max even on tablets */ }
 }
 
 @media (max-width: 480px) {
-  body {
-    padding: 10px 0; /* Reduce body padding */
-  }
-  .app-container {
-    gap: 10px; /* Reduce gap */
-  }
-  #top-bar .glossy-button {
-    font-size: 0.8em;
-    padding: 8px 10px;
-  }
-  .timer-display {
-    font-size: 0.9em; /* Match top-bar button font or keep slightly larger */
-    padding: 8px 10px;
-    border-radius: 15px; /* Consistent rounding */
-  }
-  #game-area {
-    padding: 10px;
-  }
-  .sidebar {
-    padding: 5px 0;
-  }
-  .sidebar-button {
-    width: 40px;
-    height: 40px;
-    font-size: 12px;
-  }
-  #message-area {
-    font-size: 16px; /* Smaller message font */
-  }
-  .glossy-button,
-  .glossy-select {
-    font-size: 13px;
-    padding: 8px 14px;
-  }
-  .small-hint {
-    font-size: 0.7em;
-  }
-  .lock-icon-container {
-    top: 1px;
-    right: 1px;
-    font-size: 9px;
-  }
+  #top-bar .glossy-button { font-size: 0.8em; padding: 8px 10px; }
+  .timer-display { font-size: 0.9em; padding: 8px 10px; border-radius: 15px; }
+  #game-area { padding: 10px; max-width: 100vw; }
+  #play-area-wrapper { gap: 10px; }
+  .sidebar { max-width: 95%; gap: 5px; }
+  .sidebar-button { width: 40px; height: 40px; font-size: 12px; }
+  #canvas-container-main { width: 95vw; }
+  #canvas-container { max-width: 100%; } /* Allow grid to use almost full width */
+  #message-area { font-size: clamp(0.9rem, 2.5vw, 1.2rem); min-height: 24px; }
+  .glossy-button, .glossy-select { font-size: 13px; padding: 8px 14px; }
+  .small-hint { font-size: 0.5em; top:1px; right: 1px;}
+  .lock-icon-container { font-size: 9px; width: 14px; height: 14px; top:1px; right:1px;}
+
+  .sudoku-grid.grid-size-4 .cell .value,
+  .sudoku-grid.grid-size-4 .flipping-cell-face .value,
+  .sudoku-grid.grid-size-4 .morphing-cell .value { font-size: clamp(1.2rem, 7vmin, 3rem); }
+  .sudoku-grid.grid-size-9 .cell .value,
+  .sudoku-grid.grid-size-9 .flipping-cell-face .value,
+  .sudoku-grid.grid-size-9 .morphing-cell .value { font-size: clamp(0.9rem, 4.5vmin, 2rem); }
+  .sudoku-grid.grid-size-16 .cell .value,
+  .sudoku-grid.grid-size-16 .flipping-cell-face .value,
+  .sudoku-grid.grid-size-16 .morphing-cell .value { font-size: clamp(0.5rem, 3vmin, 1.2rem); }
 }
 
-/* Lock Icon Styles */
-.lock-icon-container {
-  position: absolute;
-  top: 2px; 
-  right: 2px; 
-  width: 16px;
-  height: 16px;
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  cursor: pointer;
-  font-size: 10px; 
-  z-index: 2; 
-  user-select: none; 
-  transition: opacity 0.2s ease-in-out;
-}
+/*debug coloring
 
-.lock-icon-container.is-inactive-lock {
-  opacity: 0.3;
-}
-
-.lock-icon-container.is-inactive-lock:hover {
-  opacity: 0.7;
-}
-
-.lock-icon-container.is-active-lock {
-  opacity: 1;
-}
-
-.cell.locked {
-  box-shadow: inset 0 0 0 2px #0056b3; 
-}
-
-/* Style for active sidebar button (e.g., filter enabled) */
-.sidebar-button.active {
-  background: linear-gradient(to bottom, #a0ddff 0%, #6cace0 100%); /* More distinct active blue */
-  border-color: #5a99cf;
-  color: #002244; /* Darker text for active state */
-  box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.2), /* Stronger inner shadow */
-              0 1px 0 rgba(255,255,255,0.6); /* Top highlight */
-  font-weight: 700; /* Bolder text */
-}
-.sidebar-button.active:hover {
-  background: linear-gradient(to bottom, #90cff0 0%, #5c9bd1 100%);
-}
-
-
-/* Style for disabled context menu options */
-.cell-context-menu .context-menu-value-button.disabled-context-option {
-  opacity: 0.5; /* More visible than 0.4 but still clearly disabled */
-  cursor: not-allowed;
-  background: linear-gradient( to bottom, #f0f0f0 0%, #e0e0e0 100% ) !important; /* Override hover if any */
-  color: #999 !important;
-  border-color: #d0d0d0 !important;
-  box-shadow: inset 0 1px 2px rgba(0,0,0,0.05) !important;
-  transform: none !important; /* Prevent hover transform */
-}
-
-.cell-context-menu .context-menu-value-button.disabled-context-option:hover {
-  /* Explicitly keep it looking disabled on hover */
-  background: linear-gradient( to bottom, #f0f0f0 0%, #e0e0e0 100% ) !important;
-  color: #999 !important;
-  border-color: #d0d0d0 !important;
-  box-shadow: inset 0 1px 2px rgba(0,0,0,0.05) !important;
-}
- 
-/* Style for hinted cells */
-.hinted-cell-indicator {
-  /* Example: a subtle glowing border or background pulse */
-  /* Ensure it doesn't conflict too much with selection/hover */
-  box-shadow: 0 0 10px 3px rgba(76, 175, 80, 0.7) !important; /* Greenish glow */
-  /* Or a distinct border: */
-  /* border: 2px dashed #4CAF50 !important; */
-  /* outline: 2px dashed #4CAF50; */
-  /* outline-offset: -2px; */
-  z-index: 15 !important; /* Ensure it's visible */
-}
-
-/* If applying to FlippingCell faces specifically */
-.flipping-cell-face.hinted-cell-indicator-face {
-  /* Similar styles as above, but applied to the face */
-  box-shadow: inset 0 0 8px 2px rgba(76, 175, 80, 0.6);
-}
-
-
-/* Sidebar Button Styling - Add disabled state for hint button */
-.sidebar-button:disabled,
-.sidebar-button.disabled { /* Add .disabled class for manual disabling if needed */
-  opacity: 0.5;
-  cursor: not-allowed;
-  background: linear-gradient(to bottom, #e0e0e0 0%, #d0d0d0 100%) !important; /* More distinct disabled */
-  border-color: #c0c0c0 !important;
-  color: #888 !important;
-  box-shadow: inset 0 1px 2px rgba(0,0,0,0.1) !important;
-  transform: none !important;
-}
+.app-container {background-color: lightcyan;}
+#game-area { background-color: lightblue; }
+#play-area-wrapper { background-color: lightcoral; }
+#canvas-container-main { background-color: lightgoldenrodyellow; }
+#canvas-container { background-color: lightgreen; }
+*/
