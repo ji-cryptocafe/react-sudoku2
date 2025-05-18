@@ -1,58 +1,46 @@
 // src/components/SudokuGrid.jsx
 import React from 'react';
-// import Cell from './Cell';
-import { cellComponentMap, DefaultCellComponent } from './cellTypes/cellComponentMap'; // NEW IMPORT
+import { cellComponentMap, DefaultCellComponent } from './cellTypes/cellComponentMap';
 
 function SudokuGrid({
   gridSize,
   initialCluesBoard,
   userBoard,
   solutionBoard,
-  cellTypesBoard, // NEW PROP
+  cellTypesBoard,
   selectedCell,
   hoveredCell,
   setHoveredCell,
-  onCellClick,
-  onCellContextMenu,
+  onCellClick, // This prop from App.jsx will receive (row, col, event, cellElement)
+  // onCellContextMenu, // This prop might become unused or repurposed for other cell types
   gameState,
   lockedCells,
   onToggleLock,
   hintedCells,
 }) {
-  // Robust check: If boards aren't ready, don't attempt to render cells
   if (
     !initialCluesBoard || initialCluesBoard.length !== gridSize ||
     !userBoard || userBoard.length !== gridSize ||
     !solutionBoard || solutionBoard.length !== gridSize ||
-    !cellTypesBoard || cellTypesBoard.length !== gridSize // ADD CHECK FOR cellTypesBoard
+    !cellTypesBoard || cellTypesBoard.length !== gridSize
   ) {
     return <p>Initializing grid data...</p>;
-  } 
+  }
 
   const subgridSize = Math.sqrt(gridSize);
   const cells = [];
 
-  // This loop should now be safe
   for (let r = 0; r < gridSize; r++) {
     for (let c = 0; c < gridSize; c++) {
-      // Defensive access, though the check above should prevent issues
-      const initialVal = initialCluesBoard[r]
-        ? initialCluesBoard[r][c]
-        : undefined;
-      const userVal = userBoard[r] ? userBoard[r][c] : undefined;
-      const solutionVal = solutionBoard[r] ? solutionBoard[r][c] : undefined;
-
-      // If for some reason a value is still undefined (should not happen with guards)
-      // handle it gracefully or throw a more specific error.
-      // For now, we assume the top-level check in SudokuGrid handles this.
-
-      // Determine which component to render for this cell
-      const cellType = (cellTypesBoard[r] && cellTypesBoard[r][c]) ? cellTypesBoard[r][c] : 'standard';
+      const initialVal = initialCluesBoard[r]?.[c];
+      const userVal = userBoard[r]?.[c];
+      const solutionVal = solutionBoard[r]?.[c];
+      const cellType = cellTypesBoard[r]?.[c] || 'standard';
       const CellComponentToRender = cellComponentMap[cellType] || DefaultCellComponent;
       const isHinted = hintedCells.some(hc => hc.row === r && hc.col === c);
 
       cells.push(
-        <CellComponentToRender // DYNAMICALLY RENDER THE COMPONENT
+        <CellComponentToRender
           key={`${r}-${c}`}
           row={r}
           col={c}
@@ -61,32 +49,39 @@ function SudokuGrid({
           solutionValue={solutionVal}
           isSelected={selectedCell?.row === r && selectedCell?.col === c}
           isHovered={hoveredCell?.row === r && hoveredCell?.col === c}
-          isRowHovered={hoveredCell?.row === r} // Pass these down
-          isColHovered={hoveredCell?.col === c} // Pass these down
+          isRowHovered={hoveredCell?.row === r}
+          isColHovered={hoveredCell?.col === c}
           isHinted={isHinted}
-          isSubgridHovered={ // Pass these down
+          isSubgridHovered={
             hoveredCell &&
-            Math.floor(r / subgridSize) ===
-              Math.floor(hoveredCell.row / subgridSize) &&
-            Math.floor(c / subgridSize) ===
-              Math.floor(hoveredCell.col / subgridSize)
+            Math.floor(r / subgridSize) === Math.floor(hoveredCell.row / subgridSize) &&
+            Math.floor(c / subgridSize) === Math.floor(hoveredCell.col / subgridSize)
           }
-          onClick={() => onCellClick(r, c)}
+          // onClick for CellComponentToRender will be its internal `handleCellLeftClick`
+          // which then calls this onCellClick prop from App.
+          onClick={(clickedRow, clickedCol, eventFromCell, cellElementFromCell) => {
+             // Here, r and c are from the SudokuGrid loop.
+             // We use these to call App's onCellClick.
+             // The cell component (MorphingCell) calls its onClick prop with its own row, col, event, and ref.
+             // So, `clickedRow` and `clickedCol` from MorphingCell should match `r` and `c` here.
+             // The important part is passing `eventFromCell` and `cellElementFromCell` up.
+            onCellClick(r, c, eventFromCell, cellElementFromCell);
+          }}
           onMouseEnter={() => setHoveredCell({ row: r, col: c })}
-          onCellContextMenu={(eventFiredByCell, rowReceivedFromCell, colReceivedFromCell) => {
-            // r and c here are from SudokuGrid's loops for this specific cell instance
-            console.log(`[SudokuGrid cell R${r}C${c}] Received context menu. event=${eventFiredByCell ? 'yes':'no'}, rowFromCell=${rowReceivedFromCell}, colFromCell=${colReceivedFromCell}. Will use loop r=${r}, c=${c}.`);
-            // `onCellContextMenu` here is SudokuGrid's OWN PROP received from App.jsx
-            onCellContextMenu(eventFiredByCell, r, c);
-            }
-          }
+          // For MorphingCell, onCellContextMenu prop won't be used for opening the menu.
+          // For other cell types, it might still be used if they retain right-click.
+          // Let's assume for now we only change MorphingCell.
+          // If other cells still use right-click, this needs to stay or be conditional.
+          // onCellContextMenu={(eventFiredByCell, rowReceivedFromCell, colReceivedFromCell) => {
+          //   if (cellType !== 'morphing') { // Example: only call for non-morphing
+          //     onCellContextMenu(eventFiredByCell, r, c);
+          //   }
+          // }}
           gridSize={gridSize}
           gameState={gameState}
-          isLocked={lockedCells.some(
-            (cell) => cell.row === r && cell.col === c
-          )}
+          isLocked={lockedCells.some(cell => cell.row === r && cell.col === c)}
           onToggleLock={() => onToggleLock(r, c)}
-          // Add any other props StandardCell (previously Cell) was expecting
+          cellType={cellType} // Pass cellType so App.jsx can know
         />
       );
     }

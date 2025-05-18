@@ -10,4 +10,4 @@ export const cellComponentMap = {
 };
 
 // DefaultCellComponent can remain StandardCell or be changed if desired
-export const DefaultCellComponent = MorphingCell;
+export const DefaultCellComponent = FlippingCell;

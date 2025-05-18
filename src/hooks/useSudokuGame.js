@@ -51,7 +51,7 @@ export const useSudokuGame = (initialGridSize, initialDifficulty) => {
 
     const newCellTypesBoard = Array(gridSize) // Use hook's current state
       .fill(null)
-      .map(() => Array(gridSize).fill('morphing'));
+      .map(() => Array(gridSize).fill('flipping'));
     setCellTypesBoard(newCellTypesBoard);
 
     setLockedCells([]);

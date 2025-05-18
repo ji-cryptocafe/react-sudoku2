@@ -8,7 +8,7 @@ function CellContextMenu({
   y,
   gridSize,
   onSelectValue,
-  onClose,
+  onClose, // onClose is now App's handleCloseCellContextMenu
   isFilteringEnabled, // NEW PROP: boolean, true if filtering is active for this menu instance
   validNumbersList,   // NEW PROP: array of 0-indexed valid numbers, or null/undefined if not filtering or no valid numbers
 }) {
@@ -19,68 +19,68 @@ function CellContextMenu({
   const values = Array.from({ length: gridSize }, (_, i) => i); // 0-indexed values 0 to gridSize-1
 
   useEffect(() => {
-    // This effect handles initial positioning and fade-in animation
     if (menuRef.current) {
       const menuRect = menuRef.current.getBoundingClientRect();
       let finalX = x;
       let finalY = y;
 
-      // Adjust if menu goes off-screen
-      if (x + menuRect.width > window.innerWidth - 10) {
-        finalX = window.innerWidth - menuRect.width - 10;
-      }
-      if (y + menuRect.height > window.innerHeight - 10) {
-        finalY = window.innerHeight - menuRect.height - 10;
-      }
-      finalX = Math.max(5, finalX); // Prevent negative coordinates
+      if (x + menuRect.width > window.innerWidth - 10) finalX = window.innerWidth - menuRect.width - 10;
+      if (y + menuRect.height > window.innerHeight - 10) finalY = window.innerHeight - menuRect.height - 10;
+      finalX = Math.max(5, finalX);
       finalY = Math.max(5, finalY);
 
       setMenuPosition({ top: finalY, left: finalX });
-
-      // Set transform origin based on click position relative to menu's final position
       const originX = x - finalX;
       const originY = y - finalY;
       setTransformOrigin(`${originX}px ${originY}px`);
 
-      // Trigger the transition by adding the .visible class after a short delay
-      const timer = setTimeout(() => {
-        setIsVisible(true);
-      }, 10); 
-
+      const timer = setTimeout(() => setIsVisible(true), 10);
       return () => clearTimeout(timer);
     }
-  }, [x, y]); // Recalculate only if x or y (click position) changes
+  }, [x, y]); // Re-position if x, y (passed from App context menu state) change
+
 
   useEffect(() => {
-    // This effect handles closing the menu on outside click or Escape key
-    const handleClickOutside = (event) => {
-      if (menuRef.current && !menuRef.current.contains(event.target)) {
-        setIsVisible(false); // Start shrink animation
-        setTimeout(onClose, 200); // Delay closing to allow animation
-      }
-    };
+    // The global click listener in App.jsx now handles more complex "outside click" logic.
+    // This menu's own outside click should only handle Escape or very direct "off-menu" clicks
+    // that App.jsx might not easily catch as "not on a cell".
+
     const handleEscKey = (event) => {
       if (event.key === 'Escape') {
         setIsVisible(false);
-        setTimeout(onClose, 200);
+        setTimeout(onClose, 200); // Call App's close handler
       }
     };
 
-    document.addEventListener('mousedown', handleClickOutside);
+    // This mousedown listener on document is now primarily for clicks that are *not* on game cells
+    // or other interactive elements that App.jsx would handle.
+    // App.jsx's global listener will be more specific.
+    const handleClickTrulyOutside = (event) => {
+        if (menuRef.current && !menuRef.current.contains(event.target)) {
+            // This condition means the click was outside the menu itself.
+            // App.jsx's global mousedown listener will determine if this click
+            // should truly close the menu (e.g., click on body) or if it was on another cell
+            // (which App.jsx's handleCellClick would manage, potentially moving the menu).
+            // For safety, if this component's direct outside click fires,
+            // and App.jsx doesn't intervene to "move" it, it implies a general close.
+            // However, to avoid race conditions or double-closing, we can let App.jsx's
+            // global listener be the primary decider for "outside" clicks.
+            // This local one is now mainly for ESC.
+        }
+    };
+
+    // document.addEventListener('mousedown', handleClickTrulyOutside); // Temporarily disable direct outside click here
     document.addEventListener('keydown', handleEscKey);
     return () => {
-      document.removeEventListener('mousedown', handleClickOutside);
+      // document.removeEventListener('mousedown', handleClickTrulyOutside);
       document.removeEventListener('keydown', handleEscKey);
     };
-  }, [onClose]);
+  }, [onClose]); // onClose is App's handleCloseCellContextMenu
 
   const handleValueSelect = (val, isDisabled) => {
-    if (isDisabled) return; // Prevent action if button is explicitly disabled by filter
-
-    setIsVisible(false); // Start shrink animation
-    setTimeout(() => {
-      onSelectValue(val); // Actual selection and App state update
-    }, 200); // Match CSS transition duration for animation
+    if (isDisabled) return;
+    setIsVisible(false);
+    setTimeout(() => onSelectValue(val), 180); // Shortened to allow quicker state update in App
   };
 
   const menuStyle = {
@@ -94,53 +94,36 @@ function CellContextMenu({
   return (
     <div
       ref={menuRef}
-      style={menuStyle}
+      style={{
+        position: 'fixed',
+        zIndex: 3000,
+        top: `${menuPosition.top}px`,
+        left: `${menuPosition.left}px`,
+        transformOrigin: transformOrigin,
+      }}
       className={`cell-context-menu ${isVisible ? 'visible' : ''}`}
-      // Prevent right-click on the menu itself from propagating or opening another browser menu
-      onContextMenu={(e) => e.preventDefault()} 
+      onContextMenu={(e) => e.preventDefault()}
     >
       {values.map((val) => {
-        // Determine if this value should be disabled based on filtering props
-        let isValueAllowed = true; // Default to allowed
+        let isValueAllowed = true;
         if (isFilteringEnabled) {
           if (validNumbersList && Array.isArray(validNumbersList)) {
             isValueAllowed = validNumbersList.includes(val);
           } else {
-            // If filtering is enabled but validNumbersList is not a valid array,
-            // it implies an issue upstream or that all numbers are considered invalid by the filter.
-            // For safety, let's assume if validNumbersList is not a proper list, no specific numbers are "valid" by filter.
-            // However, App.jsx's handleOpenContextMenu now tries to provide a default list (all numbers)
-            // if initialCluesBoard isn't ready, so validNumbersList should ideally always be an array here.
-            // If it's explicitly null/undefined AND filtering is on, treat as "no specific numbers allowed by filter".
-            isValueAllowed = false; // if filtering and no valid list, assume nothing is allowed via filter
+            isValueAllowed = !isFilteringEnabled; // If filtering is on but no list, nothing is "valid" by filter
           }
         }
-        
         const isDisabledByFilter = isFilteringEnabled ? !isValueAllowed : false;
-        
-        // Debug log (uncomment to verify props and calculated disabled state)
-        /*
-        console.log(
-          `ContextMenu Button for value ${getDisplayValue(val, gridSize)} (internal: ${val}):\n` +
-          `  isFilteringEnabled: ${isFilteringEnabled}\n` +
-          `  validNumbersList: ${JSON.stringify(validNumbersList)}\n` +
-          `  isValueAllowed (based on list): ${isValueAllowed}\n` +
-          `  isDisabledByFilter (final decision): ${isDisabledByFilter}`
-        );
-        */
-        
         return (
           <button
             key={val}
             className={`context-menu-value-button glossy-button ${isDisabledByFilter ? 'disabled-context-option' : ''}`}
             onClick={(e) => {
-              e.stopPropagation(); // Prevent click from bubbling to menu's clickOutside handler
+              e.stopPropagation();
               handleValueSelect(val, isDisabledByFilter);
             }}
-            // HTML 'disabled' attribute for better accessibility and native behavior
-            // It will also prevent click events if the browser respects it for buttons.
-            disabled={isDisabledByFilter} 
-            title={isDisabledByFilter ? `Invalid for this cell (based on clues)` : `Set to ${getDisplayValue(val, gridSize)}`}
+            disabled={isDisabledByFilter}
+            title={isDisabledByFilter ? `Invalid for this cell` : `Set to ${getDisplayValue(val, gridSize)}`}
           >
             {getDisplayValue(val, gridSize)}
           </button>

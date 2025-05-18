@@ -2,9 +2,8 @@
 import React, { useState, useEffect } from 'react';
 import { getDisplayValue } from '../../logic/utils';
 import { EMPTY_CELL_VALUE } from '../../logic/constants';
-import './MorphingCell.css'; // Import the new CSS
+import './MorphingCell.css';
 
-// MorphingCell is very similar to StandardCell, with an animation for value changes.
 function MorphingCell({
   row,
   col,
@@ -16,18 +15,18 @@ function MorphingCell({
   isRowHovered,
   isColHovered,
   isSubgridHovered,
-  onClick,
+  onClick, // This prop will now be used to open the context menu
   onMouseEnter,
-  onCellContextMenu,
+  // onCellContextMenu, // REMOVED - No longer using native context menu for this cell type
   gridSize,
   isLocked,
   onToggleLock,
   gameState,
   isHinted,
+  // NEW PROP to identify cell type if App.jsx needs it for click logic
+  // cellType, // Optional, can be added if App.jsx needs to differentiate
 }) {
   const isClue = initialValue !== EMPTY_CELL_VALUE;
-
-  // State for the value that is visually displayed and an animation trigger
   const [displayedValue, setDisplayedValue] = useState(
     isClue ? initialValue : userValue
   );
@@ -35,50 +34,38 @@ function MorphingCell({
 
   useEffect(() => {
     const newEffectiveValue = isClue ? initialValue : userValue;
-
     if (newEffectiveValue !== displayedValue) {
-      // Only trigger animation if the value actually changes
-      // and it's either a user input or the initial reveal of a clue.
       if (!isClue || (isClue && displayedValue === EMPTY_CELL_VALUE && newEffectiveValue !== EMPTY_CELL_VALUE)) {
          setAnimationKey((prevKey) => prevKey + 1);
       }
       setDisplayedValue(newEffectiveValue);
     } else if (isClue && initialValue !== displayedValue) {
-      // This handles cases where a clue might change after initial render (e.g., in an editor)
-      // or ensures the initial clue is set correctly if it wasn't empty.
       setDisplayedValue(initialValue);
-      // Optionally animate clue changes too: setAnimationKey(prevKey => prevKey + 1);
     }
   }, [userValue, initialValue, isClue, displayedValue, gameState]);
 
-
-  let mainClass = 'cell morphing-cell'; // Add base 'cell' class for App.css styles + 'morphing-cell'
-  let valueSpanClass = ''; // For .value span, e.g., 'incorrect', 'hint'
-  let displayContentValue = ''; // The string to display in the span
+  let mainClass = 'cell morphing-cell';
+  let valueSpanClass = '';
+  let displayContentValue = '';
   let smallHintContent = '';
 
-  // Determine cell content and classes based on state (similar to StandardCell)
   if (isClue) {
     displayContentValue = getDisplayValue(displayedValue, gridSize);
     mainClass += ' clue';
   } else {
-    // For non-clues, displayedValue holds the user's input
     if (displayedValue !== EMPTY_CELL_VALUE) {
       displayContentValue = getDisplayValue(displayedValue, gridSize);
       mainClass += ' user-filled';
-      // Check correctness based on the actual userValue prop for failed state
       if (gameState === 'Failed' && userValue !== solutionValue) {
         valueSpanClass = 'incorrect';
         smallHintContent = getDisplayValue(solutionValue, gridSize);
       }
     } else if (gameState === 'Failed') {
-      // Empty cell, game failed: show solution as hint
       displayContentValue = getDisplayValue(solutionValue, gridSize);
       valueSpanClass = 'hint';
     }
   }
 
-  // Apply selection and hover/highlight classes
   if (isSelected && !isClue) mainClass += ' selected';
   if (isHovered) mainClass += ' hovered-cell';
   if (isRowHovered && !isHovered) mainClass += ' highlight-row';
@@ -108,32 +95,34 @@ function MorphingCell({
 
   const canShowLock = !isClue && userValue !== EMPTY_CELL_VALUE && gameState === 'Playing';
 
-  const handleLocalContextMenu = (event) => {
-    if (!isClue && gameState === 'Playing' && onCellContextMenu) {
-      event.preventDefault();
-      onCellContextMenu(event, row, col);
+  // The onClick prop is now directly used from SudokuGrid, which calls App's handleCellClick
+  // No local onContextMenu or onMouseDown specific to opening the menu here.
+  
+  const cellRef = React.useRef(null); // Ref to get cell's position
+
+  const handleCellLeftClick = (event) => {
+    if (onClick) { // onClick is App.jsx's handleCellClick
+        // Pass the event to get clientX/Y for initial menu open,
+        // or pass the cell's ref for centering. Let's use event for now.
+        onClick(row, col, event, cellRef.current); // Pass row, col, and event, and the ref
     }
   };
-  
-  const handleLocalMouseDown = (event) => {
-     if (event.button === 2 && !isClue && gameState === 'Playing') {
-        // Propagation is handled by onContextMenu preventing default
-     }
-  };
+
 
   return (
     <div
+      ref={cellRef} // Attach ref here
       className={mainClass}
       style={cellStyle}
-      onClick={onClick}
+      onClick={handleCellLeftClick} // Use the new handler
       onMouseEnter={onMouseEnter}
-      onMouseDown={handleLocalMouseDown}
-      onContextMenu={handleLocalContextMenu}
+      // onMouseDown: If needed for other purposes, but not for opening the menu.
+      // onContextMenu: Removed for MorphingCell as per requirement.
     >
       <span
-        key={animationKey} // This key forces React to re-render the span if animationKey changes
+        key={animationKey}
         className={`value ${valueSpanClass} ${
-          !isClue && displayedValue !== EMPTY_CELL_VALUE && userValue !== EMPTY_CELL_VALUE // Only animate actual user inputs
+          !isClue && displayedValue !== EMPTY_CELL_VALUE && userValue !== EMPTY_CELL_VALUE
             ? 'morph-animate'
             : ''
         }`}
