@@ -1,0 +1,45 @@
+/* src/components/cellTypes/MorphingCell.css */
+
+/* The outer .morphing-cell div can reuse styles from .cell if defined globally,
+   or you can copy relevant base styles here if MorphingCell won't also have .cell class.
+   Assuming .cell styles from App.css provide base layout, borders, etc.
+   If not, add them:
+   .morphing-cell {
+     display: flex;
+     flex-direction: column;
+     justify-content: center;
+     align-items: center;
+     cursor: pointer;
+     border: 1px solid #ddd;
+     box-sizing: border-box;
+     position: relative;
+     // ... other base styles from .cell if needed
+   }
+*/
+
+.morphing-cell .value.morph-animate {
+    /* The animation will be applied to the span holding the number */
+    animation: morphNumberEffect 250ms ease-in-out forwards;
+  }
+  
+  @keyframes morphNumberEffect {
+    0% {
+      opacity: 0.9;
+      transform: scale(0.9) translateY(0px);
+    }
+    60% { /* Overshoot slightly for a bouncier feel */
+      opacity: 0.95;
+      transform: scale(1.2) translateY(0px);
+    }
+    100% {
+      opacity: 1;
+      transform: scale(1) translateY(0);
+    }
+  }
+  
+  /* Styles for clue, user-filled, incorrect, hint, selected, hovered, locked, borders
+     will be applied via JavaScript by adding classes to the main .morphing-cell div
+     and the .value span, similar to StandardCell. These can largely be inherited
+     from App.css if .morphing-cell also has .cell, or by ensuring
+     MorphingCell.jsx applies the same conditional classes as StandardCell.jsx.
+  */
