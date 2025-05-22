@@ -12,24 +12,24 @@ export const useCellContextMenu = () => {
     validNumbersForMenu: null,
     isFilteringActiveForMenu: false,
     // userPencilMarksForMenu: [], // NEW: Store pencil marks for the current menu instance
+    menuContext: 'main', // NEW: 'main' or 'corner'
   });
 
   // Added userPencilMarks to the signature
-  const openMenu = useCallback((x, y, row, col, validNumbersList, isFilteringActive, userPencilMarks) => {
+  // Added menuContext to the signature
+  const openMenu = useCallback((x, y, row, col, validNumbersList, isFilteringActive, userPencilMarks, menuContext = 'main') => {
     setMenuState(prevState => ({
       visible: true,
       x,
       y,
       row,
       col,
-      // instanceKey: prevState.instanceKey + 1, // Key change might not be needed if props themselves cause re-render
-      // Let's rely on props changing in CellContextMenu or App.jsx's key for CellContextMenu itself.
-      // Forcing a new key for the menu on *every* open isn't ideal if only notes changed for *another* cell.
-      // App.jsx's key on CellContextMenu will now include stringified notes for *this* menu instance.
-      instanceKey: prevState.instanceKey, // Keep same key unless specifically reset
+      instanceKey: prevState.instanceKey, // Or +1 if always new instance desired
       validNumbersForMenu: validNumbersList,
       isFilteringActiveForMenu: isFilteringActive,
-     }));
+      // userPencilMarksForMenu prop removed from here as App.jsx passes them directly
+      menuContext: menuContext, // STORE THE CONTEXT
+    }));
   }, []);
 
   const closeMenu = useCallback(() => {
@@ -41,6 +41,7 @@ export const useCellContextMenu = () => {
       validNumbersForMenu: null,
       isFilteringActiveForMenu: false,
        // instanceKey: prevState.instanceKey + 1, // Increment key on close to ensure clean state if reopened
+       menuContext: 'main', // Reset context
     }));
   }, []);
 
@@ -54,6 +55,7 @@ export const useCellContextMenu = () => {
       instanceKey: prevState.instanceKey + 1, // Force a new key for a full reset
       validNumbersForMenu: null,
       isFilteringActiveForMenu: false,
+      menuContext: 'main', // Reset context
      }));
   }, []);
   

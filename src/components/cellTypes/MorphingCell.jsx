@@ -1,5 +1,5 @@
 // src/components/cellTypes/MorphingCell.jsx
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef as useReactRef } from 'react'; // Renamed useRef to avoid conflict if cell needs its own internal ref
 import { getDisplayValue } from '../../logic/utils';
 import { EMPTY_CELL_VALUE } from '../../logic/constants';
 import './MorphingCell.css';
@@ -25,7 +25,15 @@ function MorphingCell({
   isHinted,
   // NEW PROP to identify cell type if App.jsx needs it for click logic
   // cellType, // Optional, can be added if App.jsx needs to differentiate
+  // --- NEW PROPS for Corner Notes ---
+  cornerMarkValue,          // The value for the corner note (0-15 or EMPTY_CELL_VALUE)
+  // isCornerNoteModeActive, // Cell doesn't directly use this; visibility logic is based on other factors
+  onCornerNoteBoxClick,     // (row, col, event, cornerBoxElement) => void
+  onCornerNoteRightClick,   // (row, col, event) => void
 }) {
+  const cellDOMRef = useReactRef(null); // Ref for the main cell div
+  const cornerBoxRef = useReactRef(null); // Ref for the corner box div
+
   const isClue = initialValue !== EMPTY_CELL_VALUE;
   const [displayedValue, setDisplayedValue] = useState(
     isClue ? initialValue : userValue
@@ -71,7 +79,7 @@ function MorphingCell({
   if (isRowHovered && !isHovered) mainClass += ' highlight-row';
   if (isColHovered && !isHovered) mainClass += ' highlight-col';
   if (isSubgridHovered && !isHovered) mainClass += ' highlight-subgrid';
-  if (isLocked) mainClass += ' locked';
+  if (isLocked) mainClass += ' locked'; // Corner note should not show if locked
   if (isHinted && !isClue && userValue === EMPTY_CELL_VALUE) {
     mainClass += ' hinted-cell-indicator';
   }
@@ -93,32 +101,72 @@ function MorphingCell({
     if (onToggleLock) onToggleLock();
   };
 
-  const canShowLock = !isClue && userValue !== EMPTY_CELL_VALUE && gameState === 'Playing';
-
-  // The onClick prop is now directly used from SudokuGrid, which calls App's handleCellClick
-  // No local onContextMenu or onMouseDown specific to opening the menu here.
-  
-  const cellRef = React.useRef(null); // Ref to get cell's position
-
-  const handleCellLeftClick = (event) => {
-    if (onClick) { // onClick is App.jsx's handleCellClick
-        // Pass the event to get clientX/Y for initial menu open,
-        // or pass the cell's ref for centering. Let's use event for now.
-        onClick(row, col, event, cellRef.current); // Pass row, col, and event, and the ref
+  const handleMainCellLeftClick = (event) => {
+    // If corner note mode is active, a click on the main cell might do nothing,
+    // or it might still select the cell for regular input, or toggle corner note mode off.
+    // For now, let's assume main cell click still works as usual for opening menu for main value.
+    // App.jsx's isCornerNoteModeActive might influence what handleCellClick does.
+    // Current App.jsx handleCellClick will open menu for 'main' context.
+    if (onClick) {
+        onClick(row, col, event, cellDOMRef.current);
     }
   };
 
+  const handleMainCellLockClick = (event) => {
+    event.stopPropagation(); // Prevent main cell click
+    if (onToggleLock) onToggleLock(); // This will call App's handleToggleLockCell
+  };
+
+  const canShowLock = !isClue && userValue !== EMPTY_CELL_VALUE && gameState === 'Playing';
+// --- Corner Note Logic ---
+  const showCornerNoteIndicator = !isClue && !isLocked && userValue !== EMPTY_CELL_VALUE && gameState === 'Playing';
+  const hasCornerMark = cornerMarkValue !== EMPTY_CELL_VALUE;
+
+  const handleInternalCornerBoxClick = (event) => {
+    // Call the prop passed from App.jsx, which knows how to open the menu for 'corner' context
+    if (onCornerNoteBoxClick) {
+      onCornerNoteBoxClick(row, col, event, cornerBoxRef.current);
+    }
+  };
+
+  const handleInternalCornerNoteRightClick = (event) => {
+    // Call the prop passed from App.jsx to clear the corner note
+    if (onCornerNoteRightClick) {
+      onCornerNoteRightClick(row, col, event);
+    }
+  };
+   
 
   return (
     <div
-      ref={cellRef} // Attach ref here
+      ref={cellDOMRef}
       className={mainClass}
       style={cellStyle}
-      onClick={handleCellLeftClick} // Use the new handler
+      onClick={handleMainCellLeftClick}
       onMouseEnter={onMouseEnter}
-      // onMouseDown: If needed for other purposes, but not for opening the menu.
-      // onContextMenu: Removed for MorphingCell as per requirement.
     >
+      {/* Corner Note Display & Interaction Area */}
+      {showCornerNoteIndicator && (
+        <div
+          ref={cornerBoxRef}
+          className={`corner-note-box ${hasCornerMark ? 'has-value' : ''}`}
+          onClick={handleInternalCornerBoxClick} // Left-click to open menu for corner note
+          onContextMenu={handleInternalCornerNoteRightClick} // Right-click to clear corner note
+          title={
+            hasCornerMark 
+            ? `Corner note: ${getDisplayValue(cornerMarkValue, gridSize)}. Click to change, Right-click to clear.`
+            : "Click to set corner note."
+          }
+        >
+          {hasCornerMark && (
+            <span className="corner-note-value">
+              {getDisplayValue(cornerMarkValue, gridSize)}
+            </span>
+          )}
+        </div>
+      )}
+
+      {/* Main Value Display */}
       <span
         key={animationKey}
         className={`value ${valueSpanClass} ${
@@ -132,10 +180,12 @@ function MorphingCell({
       {smallHintContent && (
         <span className="small-hint">{smallHintContent}</span>
       )}
+
+      {/* Lock Icon */}
       {canShowLock && (
         <div
           className={`lock-icon-container ${isLocked ? 'is-active-lock' : 'is-inactive-lock'}`}
-          onClick={handleLockClick}
+          onClick={handleMainCellLockClick}
           title={isLocked ? 'Unlock cell value' : 'Lock cell value'}
           role="button"
           tabIndex={0}

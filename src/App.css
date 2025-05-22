@@ -430,3 +430,95 @@ body {
 #canvas-container-main { background-color: lightgoldenrodyellow; }
 #canvas-container { background-color: lightgreen; }
 */
+
+.cell .corner-note-box {
+  position: absolute;
+  top: 1px;
+  left: 1px;
+  /* Responsive base size for the box itself */
+  width: clamp(14px, 3.5vmin, 22px); /* Slightly larger base */
+  height: clamp(14px, 3.5vmin, 22px);
+  
+  /* Default background: visible when no value, indicating clickability */
+  background-color: rgba(200, 200, 255, 0.25); /* Reduced opacity for default */
+  border: 1px solid rgba(150, 150, 200, 0.35); /* Reduced opacity for default */
+  
+  border-radius: 3px; /* Slightly more rounded */
+  cursor: pointer;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  
+  /* Base font size for the corner note value - will be overridden if it has value */
+  /* This will be a fallback if the .corner-note-value span isn't rendered or for some reason. */
+  font-size: clamp(0.5rem, 2vmin, 0.9rem); 
+  color: #445; /* Darker color for better visibility on light background */
+  z-index: 1;
+  transition: background-color 0.2s, border-color 0.2s, opacity 0.2s;
+  opacity: 0.6; /* Default opacity, increases on hover or if it has value */
+}
+
+.cell .corner-note-box:hover {
+  background-color: rgba(180, 180, 230, 0.45);
+  border-color: rgba(100, 100, 150, 0.5);
+  opacity: 1;
+}
+
+/* When the corner note box HAS a value */
+.cell .corner-note-box.has-value {
+  background-color: rgba(0, 0, 0, 0.05); /* Almost transparent background */
+  border-color: rgba(0, 0, 0, 0.1);     /* Very subtle border, or even 'transparent' */
+  opacity: 1; /* Full opacity for the text */
+}
+
+.cell .corner-note-box.has-value:hover {
+  background-color: rgba(0, 0, 0, 0.1);  /* Slightly more visible on hover */
+  border-color: rgba(0, 0, 0, 0.2);
+}
+
+.cell .corner-note-box .corner-note-value {
+  font-weight: bold;
+  line-height: 1;
+  display: block; /* Ensure it takes up space if needed */
+  
+  /* --- FONT SIZE ADJUSTMENT --- */
+  /* This is the tricky part: making it 80% of the PARENT CELL's value font size.
+     CSS doesn't have a direct way to say "80% of parent's .value span's font-size".
+     We can use `em` units relative to the .corner-note-box's font-size,
+     or try to set a base font-size on .corner-note-box that is itself relative
+     to the main cell, and then make .corner-note-value slightly larger within that.
+
+     Option 1: Relative to .corner-note-box's font-size (simpler CSS)
+     If .corner-note-box font-size is clamp(0.5rem, 2vmin, 0.9rem),
+     then 1.2em here would make it slightly larger than that.
+     This won't be exactly 80% of the main cell's value.
+  */
+  /* font-size: 1.2em; */ /* Example: 120% of the .corner-note-box's base font size */
+
+  /*
+     Option 2: A more direct attempt using CSS variables if you set them on the main cell.
+     This would require MorphingCell.jsx to set a CSS variable based on its main value's font size.
+     Example in MorphingCell.jsx's style: style={{ ...cellStyle, '--main-font-size': cellStyle.fontSize }}
+     Then in CSS: font-size: calc(var(--main-font-size) * 0.8);
+     This is more complex to implement across cell types.
+
+     Option 3: Use a fixed-ish responsive size that *approximates* 80%.
+     The main cell value font sizes in App.css are like:
+     grid-size-9: clamp(1rem, 5vmin, 2.5rem);  (16px to 40px for 1rem root)
+     80% of this is roughly: clamp(0.8rem, 4vmin, 2rem);
+
+     grid-size-16: clamp(0.6rem, 3.5vmin, 1.5rem); (9.6px to 24px)
+     80% of this is roughly: clamp(0.48rem, 2.8vmin, 1.2rem);
+
+     Let's try a new clamp for .corner-note-value that aims for this 80% feel.
+  */
+  font-size: clamp(0.6rem, 2.8vmin, 1.2rem); /* Adjust min, preferred, max based on main cell values */
+  color: #005aba; /* Ensure good contrast for the number itself */
+}
+
+
+/* Adjust lock icon z-index if it needs to be above corner note box */
+.lock-icon-container {
+  /* ... existing styles ... */
+  z-index: 2; /* Ensure lock is above corner note */
+}

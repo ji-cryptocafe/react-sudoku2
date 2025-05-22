@@ -1,6 +1,8 @@
 // src/components/SudokuGrid.jsx
 import React from 'react';
 import { cellComponentMap, DefaultCellComponent } from './cellTypes/cellComponentMap';
+import { EMPTY_CELL_VALUE } from '../logic/constants'; // Import if needed by cells
+
 
 function SudokuGrid({
   gridSize,
@@ -20,6 +22,11 @@ function SudokuGrid({
   cellContextMenuVisible,
   cellContextMenuRow,
   cellContextMenuCol,
+  // --- NEW PROPS for Corner Notes ---
+  cornerMarks,
+  isCornerNoteModeActive,
+  onCornerNoteBoxClick,     // (row, col, event, cornerBoxElement) => void
+  onCornerNoteRightClick,   // (row, col, event) => void
 }) {
   if (
     !initialCluesBoard || initialCluesBoard.length !== gridSize ||
@@ -32,10 +39,10 @@ function SudokuGrid({
 
   const subgridSize = Math.sqrt(gridSize);
   const cells = [];
-  // If menu is visible and has a target cell, use that. Otherwise, use the regular hoveredCell.
+
   const highlightTarget = (cellContextMenuVisible && cellContextMenuRow !== null && cellContextMenuCol !== null)
-  ? { row: cellContextMenuRow, col: cellContextMenuCol }
-  : hoveredCell;
+    ? { row: cellContextMenuRow, col: cellContextMenuCol }
+    : hoveredCell;
 
   for (let r = 0; r < gridSize; r++) {
     for (let c = 0; c < gridSize; c++) {
@@ -45,10 +52,13 @@ function SudokuGrid({
       const cellType = cellTypesBoard[r]?.[c] || 'standard';
       const CellComponentToRender = cellComponentMap[cellType] || DefaultCellComponent;
       const isHinted = hintedCells.some(hc => hc.row === r && hc.col === c);
+      
+      const cellKey = `${r}-${c}`;
+      const cornerMarkValue = cornerMarks && cornerMarks[cellKey] !== undefined ? cornerMarks[cellKey] : EMPTY_CELL_VALUE;
 
       cells.push(
         <CellComponentToRender
-          key={`${r}-${c}`}
+          key={cellKey}
           row={r}
           col={c}
           initialValue={initialVal}
@@ -64,60 +74,40 @@ function SudokuGrid({
             Math.floor(c / subgridSize) === Math.floor(highlightTarget.col / subgridSize)
           }
           isHinted={isHinted}
-          
-          // onClick for CellComponentToRender will be its internal `handleCellLeftClick`
-          // which then calls this onCellClick prop from App.
           onClick={(clickedRow, clickedCol, eventFromCell, cellElementFromCell) => {
-             // Here, r and c are from the SudokuGrid loop.
-             // We use these to call App's onCellClick.
-             // The cell component (MorphingCell) calls its onClick prop with its own row, col, event, and ref.
-             // So, `clickedRow` and `clickedCol` from MorphingCell should match `r` and `c` here.
-             // The important part is passing `eventFromCell` and `cellElementFromCell` up.
             onCellClick(r, c, eventFromCell, cellElementFromCell);
           }}
           onMouseEnter={() => setHoveredCell({ row: r, col: c })}
-          // For MorphingCell, onCellContextMenu prop won't be used for opening the menu.
-          // For other cell types, it might still be used if they retain right-click.
-          // Let's assume for now we only change MorphingCell.
-          // If other cells still use right-click, this needs to stay or be conditional.
-          // onCellContextMenu={(eventFiredByCell, rowReceivedFromCell, colReceivedFromCell) => {
-          //   if (cellType !== 'morphing') { // Example: only call for non-morphing
-          //     onCellContextMenu(eventFiredByCell, r, c);
-          //   }
-          // }}
           gridSize={gridSize}
           gameState={gameState}
           isLocked={lockedCells.some(cell => cell.row === r && cell.col === c)}
-          onToggleLock={() => onToggleLock(r, c)}
-          cellType={cellType} // Pass cellType so App.jsx can know
+          onToggleLock={() => onToggleLock(r, c)} // Pass App's handler
+          cellType={cellType}
+
+          // --- Pass Corner Note Props ---
+          cornerMarkValue={cornerMarkValue}
+          isCornerNoteModeActive={isCornerNoteModeActive} // Though cell might not directly use this, App does
+          onCornerNoteBoxClick={onCornerNoteBoxClick}
+          onCornerNoteRightClick={onCornerNoteRightClick}
+          // --- END Corner Note Props ---
         />
       );
     }
   }
 
-  // REMOVE fixed width/height from inline style. Styling will be controlled by CSS.
   const gridStyle = {
     display: 'grid',
     gridTemplateColumns: `repeat(${gridSize}, 1fr)`,
     gridTemplateRows: `repeat(${gridSize}, 1fr)`,
-    // width: '450px', // REMOVED
-    // height: '450px', // REMOVED
-    border: '2px solid #333', // This can stay or move to CSS
-    position: 'relative', // Good for stacking contexts if needed
-    // Add aspect-ratio here or in CSS for the container
-    // aspectRatio: '1 / 1', // This ensures it stays square
+    border: '2px solid #333',
+    position: 'relative',
   };
 
   return (
     <div
       style={gridStyle}
       className="sudoku-grid"
-      onMouseLeave={() => {
-        // Only set hoveredCell to null if the menu isn't dictating the highlight
-        // Actually, it's simpler: let hoveredCell always reflect the true mouse state.
-        // The highlightTarget logic above will handle persistence.
-        setHoveredCell(null);
-      }}
+      onMouseLeave={() => setHoveredCell(null)}
     >
       {cells}
     </div>
