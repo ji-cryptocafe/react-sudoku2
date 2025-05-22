@@ -11,6 +11,8 @@ function CellContextMenu({
   onClose, // onClose is now App's handleCloseCellContextMenu
   isFilteringEnabled, // NEW PROP: boolean, true if filtering is active for this menu instance
   validNumbersList,   // NEW PROP: array of 0-indexed valid numbers, or null/undefined if not filtering or no valid numbers
+  userPencilMarksForCell, // Array of numbers user has right-clicked for *this* cell
+  onToggleUserPencilMark, // Function (value) => void, to call App's toggleUserPencilMark
 }) {
   const menuRef = useRef(null);
   const [isVisible, setIsVisible] = useState(false);
@@ -83,6 +85,13 @@ function CellContextMenu({
     setTimeout(() => onSelectValue(val), 180); // Shortened to allow quicker state update in App
   };
 
+  // NEW: Handler for right-clicking a value button
+  const handleRightClickValue = (event, val) => {
+    event.preventDefault(); // Prevent native browser context menu
+    onToggleUserPencilMark(val); // Call the callback passed from App.jsx
+    // Do NOT close the menu or select the value for the grid
+  };
+
   const menuStyle = {
     position: 'fixed',
     zIndex: 3000,
@@ -94,36 +103,42 @@ function CellContextMenu({
   return (
     <div
       ref={menuRef}
-      style={{
-        position: 'fixed',
-        zIndex: 3000,
-        top: `${menuPosition.top}px`,
-        left: `${menuPosition.left}px`,
-        transformOrigin: transformOrigin,
-      }}
+      style={menuStyle}
       className={`cell-context-menu ${isVisible ? 'visible' : ''}`}
-      onContextMenu={(e) => e.preventDefault()}
+      onContextMenu={(e) => e.preventDefault()} // Prevent context menu on the menu background
     >
       {values.map((val) => {
-        let isValueAllowed = true;
+        // Logic to skip rendering if filtering is on and number is invalid
         if (isFilteringEnabled) {
-          if (validNumbersList && Array.isArray(validNumbersList)) {
-            isValueAllowed = validNumbersList.includes(val);
-          } else {
-            isValueAllowed = !isFilteringEnabled; // If filtering is on but no list, nothing is "valid" by filter
+          if (!validNumbersList || !Array.isArray(validNumbersList) || !validNumbersList.includes(val)) {
+            return null;
           }
         }
-        const isDisabledByFilter = isFilteringEnabled ? !isValueAllowed : false;
+
+        // Check if this value is in the user's pencil marks for the current cell
+        const isPencilMarkedDisabled = userPencilMarksForCell && userPencilMarksForCell.includes(val);
+        
+        let buttonClass = "context-menu-value-button glossy-button";
+        if (isPencilMarkedDisabled) {
+          buttonClass += " user-pencil-mark-disabled"; // New class for styling
+        }
+
         return (
           <button
             key={val}
-            className={`context-menu-value-button glossy-button ${isDisabledByFilter ? 'disabled-context-option' : ''}`}
-            onClick={(e) => {
+            className={buttonClass}
+            onClick={(e) => { // Left click still selects the value
               e.stopPropagation();
-              handleValueSelect(val, isDisabledByFilter);
+              // If you want to PREVENT selection if it's pencil-marked disabled:
+              // if (isPencilMarkedDisabled) return; 
+              handleValueSelect(val);
             }}
-            disabled={isDisabledByFilter}
-            title={isDisabledByFilter ? `Invalid for this cell` : `Set to ${getDisplayValue(val, gridSize)}`}
+            onContextMenu={(e) => handleRightClickValue(e, val)} // NEW: Handle right-click
+            title={
+              isPencilMarkedDisabled
+                ? `Unmark ${getDisplayValue(val, gridSize)} as possibility (Right-click)`
+                : `Mark ${getDisplayValue(val, gridSize)} as NOT a possibility (Right-click)\nSet to ${getDisplayValue(val, gridSize)} (Left-click)`
+            }
           >
             {getDisplayValue(val, gridSize)}
           </button>

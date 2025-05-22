@@ -17,6 +17,9 @@ function SudokuGrid({
   lockedCells,
   onToggleLock,
   hintedCells,
+  cellContextMenuVisible,
+  cellContextMenuRow,
+  cellContextMenuCol,
 }) {
   if (
     !initialCluesBoard || initialCluesBoard.length !== gridSize ||
@@ -29,6 +32,10 @@ function SudokuGrid({
 
   const subgridSize = Math.sqrt(gridSize);
   const cells = [];
+  // If menu is visible and has a target cell, use that. Otherwise, use the regular hoveredCell.
+  const highlightTarget = (cellContextMenuVisible && cellContextMenuRow !== null && cellContextMenuCol !== null)
+  ? { row: cellContextMenuRow, col: cellContextMenuCol }
+  : hoveredCell;
 
   for (let r = 0; r < gridSize; r++) {
     for (let c = 0; c < gridSize; c++) {
@@ -48,15 +55,16 @@ function SudokuGrid({
           userValue={userVal}
           solutionValue={solutionVal}
           isSelected={selectedCell?.row === r && selectedCell?.col === c}
-          isHovered={hoveredCell?.row === r && hoveredCell?.col === c}
-          isRowHovered={hoveredCell?.row === r}
-          isColHovered={hoveredCell?.col === c}
-          isHinted={isHinted}
+          isHovered={highlightTarget?.row === r && highlightTarget?.col === c}
+          isRowHovered={highlightTarget?.row === r}
+          isColHovered={highlightTarget?.col === c}
           isSubgridHovered={
-            hoveredCell &&
-            Math.floor(r / subgridSize) === Math.floor(hoveredCell.row / subgridSize) &&
-            Math.floor(c / subgridSize) === Math.floor(hoveredCell.col / subgridSize)
+            highlightTarget &&
+            Math.floor(r / subgridSize) === Math.floor(highlightTarget.row / subgridSize) &&
+            Math.floor(c / subgridSize) === Math.floor(highlightTarget.col / subgridSize)
           }
+          isHinted={isHinted}
+          
           // onClick for CellComponentToRender will be its internal `handleCellLeftClick`
           // which then calls this onCellClick prop from App.
           onClick={(clickedRow, clickedCol, eventFromCell, cellElementFromCell) => {
@@ -102,9 +110,14 @@ function SudokuGrid({
 
   return (
     <div
-      style={gridStyle} // gridStyle no longer contains fixed width/height
-      className="sudoku-grid" // CSS will target this class
-      onMouseLeave={() => setHoveredCell(null)}
+      style={gridStyle}
+      className="sudoku-grid"
+      onMouseLeave={() => {
+        // Only set hoveredCell to null if the menu isn't dictating the highlight
+        // Actually, it's simpler: let hoveredCell always reflect the true mouse state.
+        // The highlightTarget logic above will handle persistence.
+        setHoveredCell(null);
+      }}
     >
       {cells}
     </div>

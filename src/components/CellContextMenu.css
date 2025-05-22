@@ -1,23 +1,24 @@
 /* src/components/CellContextMenu.css */
 .cell-context-menu {
   display: flex;
-  flex-direction: row;
+  flex-direction: row; /* This remains, so it's a single row of buttons */
   align-items: center;
-  background-color: rgba(255, 255, 255, 0.3);
-  backdrop-filter: blur(
-    0px /* Previous version had 10px, adjust as preferred */
-  );
+  background-color: rgba(255, 255, 255, 0.2);
+  backdrop-filter: blur(1px); /* Using the 1px from the -webkit-backdrop-filter for consistency */
   -webkit-backdrop-filter: blur(1px);
-  border: 1px solid rgba(255, 255, 255, 0.3);
-  border-radius: 8px;
+  border: 1px solid rgba(255, 255, 255, 0.2);
   box-shadow: 0 5px 15px rgba(0, 0, 0, 0.25);
-  padding: 3px;
-  gap: 4px;
-  transform-origin: top left;
+  transform-origin: top left; /* This is updated by JS for animation origin */
   transition: transform 0.2s cubic-bezier(0.34, 1.56, 0.64, 1),
-    opacity 0.15s ease-out;
+    opacity 0.2s ease-out;
   opacity: 0;
   transform: scale(0.5);
+
+  /* Responsive padding and gap for the menu container */
+  /* Adjust values as needed: clamp(min, preferred, max) */
+  padding: clamp(1px, 0.8vmin, 6px);  /* e.g., 4px mobile, scales with viewport, max 10px large */
+  gap: clamp(2px, 0.8vmin, 6px);      /* e.g., 4px mobile, scales with viewport, max 10px large */
+  border-radius: clamp(6px, 1.5vmin, 10px); /* Responsive border-radius for the menu itself */
 }
 
 .cell-context-menu.visible {
@@ -27,31 +28,39 @@
 
 /* Increased specificity by adding .cell-context-menu */
 .cell-context-menu .context-menu-value-button {
-  min-width: 25px;
-  height: 30px;
-  padding: 0; /* Removed !important */
-  font-size: 0.95em; /* Removed !important */
-  font-weight: 800; /* Added from observation, was likely inherited or implicit */
-  border-radius: 5px; /* Removed !important */
-  line-height: 30px; /* Added, ensures vertical centering of text */
-  text-align: center;
-  display: flex; /* Added for better centering if needed, though line-height might be enough */
-  justify-content: center; /* Added */
-  align-items: center; /* Added */
+  /* Using clamp for responsive sizing of buttons */
+  /* Aiming for buttons that are ~30px on small screens, up to ~50-60px on large screens */
+  min-width: clamp(20px, 6vmin, 40px);   /* Min width, preferred (scales with smaller viewport dim), max width */
+  height: clamp(25px, 6vmin, 45px);     /* Min height, preferred, max height */
+  font-size: clamp(0.9rem, 3vmin, 1.6rem); /* Min ~12.8px, preferred (scales with vmin), max ~22.4px (assuming 16px root font) */
+  
+  font-weight: 800;
+  border-radius: clamp(5px, 1.2vmin, 8px); /* Responsive border radius for buttons */
+  
+  /* Flex properties for centering text content within the button */
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: 0; /* Important to reset padding if using flex for alignment */
+  
+  /* Existing styling for appearance */
   background: linear-gradient(
     to bottom,
     #fdfdfd 0%,
     #f0f0f0 100%
-  ); /* Removed !important */
-  color: #0051a1; /* Removed !important */
-  border: 1px solid #d0d0d0; /* Removed !important */
+  );
+  color: #0051a1;
+  border: 1px solid #d0d0d0;
   box-shadow: 0 1px 1px rgba(0, 0, 0, 0.04),
-    inset 0 1px 0 rgba(255, 255, 255, 0.5); /* Removed !important */
+    inset 0 1px 0 rgba(255, 255, 255, 0.5);
+  /* Added font-size and dimensions to transition for smoother scaling if viewport is resized while menu is open */
   transition: border-color 0.2s ease-in-out, background 0.2s ease-in-out,
-    box-shadow 0.2s ease-in-out;
-  opacity: 0.8; /* Added, was in original CSS */
-  cursor: pointer; /* Added from .glossy-button */
-  outline: none; /* Added from .glossy-button */
+    box-shadow 0.2s ease-in-out, font-size 0.2s ease-in-out, min-width 0.2s ease-in-out, height 0.2s ease-in-out;
+  opacity: 0.8;
+  cursor: pointer;
+  outline: none;
+  line-height: 1; /* Good practice with flex centering */
+  text-align: center;
 }
 
 .cell-context-menu .context-menu-value-button:hover {
@@ -59,13 +68,13 @@
     to bottom,
     #ffffff 0%,
     #e8e8e8 100%
-  ); /* Removed !important */
-  border-color: #007bff6b; /* Removed !important */
+  );
+  border-color: #007bff6b;
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.07),
-    inset 0 1px 0 rgba(255, 255, 255, 0.5), 0 0 0 1px #007bff; /* Removed !important */
-  transform: none; /* Removed !important */
-  /* font-size: 1em; */ /* This was making text larger on hover, original .glossy-button does not do this for font-size */
-  opacity: 0.95; /* Added, was in original CSS */
+    inset 0 1px 0 rgba(255, 255, 255, 0.5), 0 0 0 1px #007bff;
+  transform: none; 
+  opacity: 0.95;
+  /* font-size: 1em; /* Removed: hover shouldn't re-scale font if base is already responsive */
 }
 
 .cell-context-menu .context-menu-value-button:active {
@@ -73,24 +82,42 @@
     to bottom,
     #e0e0e0 0%,
     #f0f0f0 100%
-  ); /* Removed !important */
-  box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.12); /* Removed !important */
-  border-color: #0056b3; /* Removed !important */
+  );
+  box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.12);
+  border-color: #0056b3;
 }
 
-/* Ensure it still picks up some base glossy button styles if not explicitly re-declared */
-/* The .context-menu-value-button in CellContextMenu.jsx also has "glossy-button" class. */
-/* The properties below are from .glossy-button in App.css which might still be needed if not overridden */
 /*
-.cell-context-menu .glossy-button {
-  // padding: 10px 18px; // Overridden by context-menu-value-button
-  // font-size: 14px; // Overridden by context-menu-value-button
-  // font-weight: 500; // Overridden by context-menu-value-button (to 800)
-  // color: #333; // Overridden by context-menu-value-button
-  // cursor: pointer; // Added above
-  // background: linear-gradient(to bottom, #ffffff 0%, #f1f1f1 100%); // Overridden
-  // box-shadow: 0 2px 3px rgba(0,0,0,0.05), inset 0 1px 0 rgba(255,255,255,0.5); // Overridden
-  // transition: all 0.2s ease-out; // Partly overridden by more specific transition
-  // outline: none; // Added above
-}
+  Note: The .disabled-context-option class and its associated styles were removed
+  as per the previous request to only show valid options when filtering is on.
+  If you need a general disabled style for these buttons for other reasons,
+  you could re-add a generic .disabled class or rely on the :disabled pseudo-class
+  if the `disabled` HTML attribute is used.
 */
+
+/* NEW STYLE for user pencil-marked (disabled) buttons */
+.cell-context-menu .context-menu-value-button.user-pencil-mark-disabled {
+  opacity: 0.5; /* More faded */
+  background: linear-gradient(
+    to bottom,
+    #f0f0f0 0%, /* A slightly off-white/greyish background */
+    #e0e0e0 100%
+  );
+  color: #a0a0a0; /* Dimmer text color */
+  text-decoration: line-through; /* Strikethrough to indicate it's ruled out by user */
+  /* box-shadow: inset 0 1px 1px rgba(0,0,0,0.05); */ /* Optional: remove or alter shadow */
+}
+
+.cell-context-menu .context-menu-value-button.user-pencil-mark-disabled:hover {
+  opacity: 0.65;
+  background: linear-gradient(
+    to bottom,
+    #e8e8e8 0%,
+    #d8d8d8 100%
+  );
+  color: #888;
+  /* Keep other hover effects minimal for disabled look */
+  box-shadow: 0 1px 1px rgba(0, 0, 0, 0.04),
+    inset 0 1px 0 rgba(255, 255, 255, 0.5);
+  border-color: #c0c0c0;
+}

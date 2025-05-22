@@ -48,6 +48,10 @@ function App() {
   const [selectedCell, setSelectedCell] = useState(null);
   const [hoveredCell, setHoveredCell] = useState(null);
   const [isFilteringEnabled, setIsFilteringEnabled] = useState(false);
+  
+  // NEW STATE: Store user's right-click disabled notes (pencil marks)
+  // Structure: { "row-col": [value1, value2], ... }
+  const [userPencilMarks, setUserPencilMarks] = useState({});
 
   const { elapsedTime, startTimer, stopTimer, resetTimer } = useTimer();
   const { isNewGameModalOpen, openNewGameModal, closeNewGameModal } = useNewGameModal();
@@ -62,6 +66,28 @@ function App() {
     closeNewGameModal();
     closeContextMenuAndResetKeyAction();
   }, [closeNewGameModal, closeContextMenuAndResetKeyAction]);
+
+  // NEW FUNCTION: Toggle a user's pencil mark for a cell and value
+  const toggleUserPencilMark = useCallback((row, col, value) => {
+    setUserPencilMarks(prevMarks => {
+      const cellKey = `${row}-${col}`;
+      const currentCellSpecificMarks = prevMarks[cellKey] ? [...prevMarks[cellKey]] : [];
+      const markIndex = currentCellSpecificMarks.indexOf(value);
+
+      if (markIndex > -1) {
+        currentCellSpecificMarks.splice(markIndex, 1);
+      } else {
+        currentCellSpecificMarks.push(value);
+      }
+      const newMarks = { // Create the new state object
+        ...prevMarks,
+        [cellKey]: currentCellSpecificMarks,
+      };
+      // The re-render of App due to setUserPencilMarks will cause CellContextMenu to get new props.
+      // The key change in CellContextMenu's render in App.jsx will ensure it updates.
+      return newMarks;
+    });
+  }, []); // Removed userPencilMarks from deps, it's being set
 
   useEffect(() => {
     if (gameState === 'Playing') {
@@ -98,6 +124,7 @@ function App() {
   const handleStartGameFromModal = useCallback(
     (newSize, newDifficulty) => {
       closeAllPopups();
+      setUserPencilMarks({}); // Clear pencil marks for a new game
       // These will trigger the useEffect in useSudokuGame to call internalStartGame
       setGridSize(newSize);
       setDifficulty(newDifficulty);
@@ -144,7 +171,7 @@ function App() {
       let menuX, menuY;
       const MENU_APPROXIMATE_HEIGHT = 25; // Estimate or calculate dynamically if possible
       const MENU_OFFSET_Y = -5; // How many pixels above the cell
-      const MENU_LEFT_OFFSET_X = -50;
+      const MENU_LEFT_OFFSET_X = -20;
       if (cellElement) {
         const rect = cellElement.getBoundingClientRect();
         // Position menu e.g., bottom-right of the cell or centered
@@ -161,14 +188,18 @@ function App() {
         menuX = cellContextMenu.x || 0; // Keep previous or default
         menuY = cellContextMenu.y || 0;
       }
+      const cellKey = `${row}-${col}`;
+      const pencilMarksForThisCell = userPencilMarks[cellKey] || []; // Get current pencil marks for this cell
 
-      openContextMenu(menuX, menuY, row, col, validNumbersList, isFilteringEnabled);
-      setSelectedCell({ row, col }); // Select the cell for which the menu is opened
+      // Pass pencilMarksForThisCell to openContextMenu
+      openContextMenu(menuX, menuY, row, col, validNumbersList, isFilteringEnabled, pencilMarksForThisCell);
+      setSelectedCell({ row, col });
     },
     [
       isCellLocked, isCellClue, closeContextMenuAndResetKeyAction,
       isNewGameModalOpen, closeNewGameModal, isFilteringEnabled,
-      initialCluesBoard, gridSize, openContextMenu, cellContextMenu.x, cellContextMenu.y // Added cellContextMenu x,y as fallback
+      initialCluesBoard, gridSize, openContextMenu, cellContextMenu.x, cellContextMenu.y,
+      userPencilMarks // ADDED userPencilMarks as dependency
     ]
   );
 
@@ -433,6 +464,10 @@ function App() {
                     lockedCells={lockedCells}
                     onToggleLock={toggleLock} // Use from hook
                     hintedCells={hintedCells}
+                    // ---- NEW PROPS FOR HOVER FIX ----
+                    cellContextMenuVisible={cellContextMenu.visible}
+                    cellContextMenuRow={cellContextMenu.row}
+                    cellContextMenuCol={cellContextMenu.col}
                   />
                 )}
               </div>
@@ -458,16 +493,24 @@ function App() {
         />
       )}
       
-      {cellContextMenu.visible && (
+      {cellContextMenu.visible && cellContextMenu.row !== null && cellContextMenu.col !== null && (
         <CellContextMenu
-          key={cellContextMenu.instanceKey}
+          key={`${cellContextMenu.instanceKey}-${cellContextMenu.row}-${cellContextMenu.col}-${JSON.stringify(userPencilMarks[`${cellContextMenu.row}-${cellContextMenu.col}`] || [])}`}
           x={cellContextMenu.x}
           y={cellContextMenu.y}
           gridSize={gridSize}
           onSelectValue={handleSelectValueFromContextMenu}
-          onClose={handleCloseCellContextMenu} // This is App's handler
+          onClose={handleCloseCellContextMenu}
           isFilteringEnabled={cellContextMenu.isFilteringActiveForMenu}
           validNumbersList={cellContextMenu.validNumbersForMenu}
+          // ---- MODIFIED PROP SOURCE ----
+          userPencilMarksForCell={userPencilMarks[`${cellContextMenu.row}-${cellContextMenu.col}`] || []}
+          // ---- END MODIFIED PROP SOURCE ----
+          onToggleUserPencilMark={(value) => {
+            if (cellContextMenu.row !== null && cellContextMenu.col !== null) {
+              toggleUserPencilMark(cellContextMenu.row, cellContextMenu.col, value);
+            }
+          }}
         />
       )}
     </div>
