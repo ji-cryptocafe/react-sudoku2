@@ -30,9 +30,9 @@
 .cell-context-menu .context-menu-value-button {
   /* Using clamp for responsive sizing of buttons */
   /* Aiming for buttons that are ~30px on small screens, up to ~50-60px on large screens */
-  min-width: clamp(20px, 6vmin, 40px);   /* Min width, preferred (scales with smaller viewport dim), max width */
+  min-width: clamp(20px, 6vmin, 36px);   /* Min width, preferred (scales with smaller viewport dim), max width */
   height: clamp(25px, 6vmin, 45px);     /* Min height, preferred, max height */
-  font-size: clamp(0.9rem, 3vmin, 1.6rem); /* Min ~12.8px, preferred (scales with vmin), max ~22.4px (assuming 16px root font) */
+  font-size: clamp(0.9rem, 3vmin, 1.3rem); /* Min ~12.8px, preferred (scales with vmin), max ~22.4px (assuming 16px root font) */
   
   font-weight: 800;
   border-radius: clamp(5px, 1.2vmin, 8px); /* Responsive border radius for buttons */

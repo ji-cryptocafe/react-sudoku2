@@ -22,24 +22,84 @@ function CellContextMenu({
 
   useEffect(() => {
     if (menuRef.current) {
-      const menuRect = menuRef.current.getBoundingClientRect();
-      let finalX = x;
-      let finalY = y;
+      const menuRect = menuRef.current.getBoundingClientRect(); // Get actual menu dimensions
+      const menuWidth = menuRect.width;
+      const menuHeight = menuRect.height;
 
-      if (x + menuRect.width > window.innerWidth - 10) finalX = window.innerWidth - menuRect.width - 10;
-      if (y + menuRect.height > window.innerHeight - 10) finalY = window.innerHeight - menuRect.height - 10;
-      finalX = Math.max(5, finalX);
-      finalY = Math.max(5, finalY);
+      // --- Desired position from props (x, y) ---
+      // These are the `menuX` and `menuY` calculated in App.jsx's handleOpenOrMoveCellContextMenu
+      // which already include offsets like MENU_LEFT_OFFSET_X and MENU_OFFSET_Y.
+      // Let's call them `desiredX` and `desiredY` for clarity here.
+      let desiredX = x;
+      let desiredY = y;
+
+      let finalX = desiredX;
+      let finalY = desiredY;
+
+      // --- Viewport boundaries ---
+      const viewportWidth = window.innerWidth;
+      const viewportHeight = window.innerHeight;
+      const scrollX = window.scrollX; // Important if the page can scroll
+      const scrollY = window.scrollY;
+
+      // --- Margins/Paddings from screen edges ---
+      const margin = 15; // Minimum space from any edge
+
+      // --- Adjust Y position (vertical) ---
+      // If menu goes off bottom
+      if (desiredY + menuHeight > viewportHeight + scrollY - margin) {
+        finalY = viewportHeight + scrollY - menuHeight - margin;
+      }
+      // If menu goes off top
+      if (desiredY < scrollY + margin) {
+        finalY = scrollY + margin;
+      }
+      // Ensure finalY is at least scrollY + margin (handles cases where menu is taller than viewport)
+      finalY = Math.max(scrollY + margin, finalY);
+
+
+      // --- Adjust X position (horizontal) ---
+      // If menu goes off right
+      if (desiredX + menuWidth > viewportWidth + scrollX - margin) {
+        finalX = viewportWidth + scrollX - menuWidth - margin;
+      }
+      // If menu goes off left
+      if (desiredX < scrollX + margin) {
+        finalX = scrollX + margin;
+      }
+      // Ensure finalX is at least scrollX + margin (handles cases where menu is wider than viewport)
+      finalX = Math.max(scrollX + margin, finalX);
 
       setMenuPosition({ top: finalY, left: finalX });
-      const originX = x - finalX;
-      const originY = y - finalY;
-      setTransformOrigin(`${originX}px ${originY}px`);
 
-      const timer = setTimeout(() => setIsVisible(true), 10);
+      // Calculate transform-origin based on the *original click point (props x, y)*
+      // relative to the *final menu position (finalX, finalY)*.
+      // The props x, y from App.jsx already account for scroll.
+      // The original x, y passed to this component are effectively the click point adjusted by initial offsets.
+      // So, we need to find where the original desiredX/Y (which is the click point + initial offset)
+      // ended up relative to the menu's actual top-left corner.
+      
+      // The 'x' and 'y' props are already relative to the document (including scroll)
+      // because App.jsx calculates them using getBoundingClientRect() and window.scrollX/Y.
+      // So, the origin calculation becomes:
+      // originX_relative_to_menu = (click_point_x_on_document) - finalX_on_document
+      // originY_relative_to_menu = (click_point_y_on_document) - finalY_on_document
+
+      // The `x` and `y` props are the *intended* top-left of the menu.
+      // The click point would be `x - MENU_LEFT_OFFSET_X` and `y - (MENU_OFFSET_Y + MENU_APPROXIMATE_HEIGHT)`
+      // if we were to reverse App.jsx's calculation.
+      // Simpler: use the original `x` and `y` passed to *this component* as the "target point"
+      // for the animation origin, as these are what App.jsx calculated as the menu's anchor.
+
+      const originXForTransform = x - finalX;
+      const originYForTransform = y - finalY;
+      
+      setTransformOrigin(`${originXForTransform}px ${originYForTransform}px`);
+
+      const timer = setTimeout(() => setIsVisible(true), 10); // Make visible after position calculation
       return () => clearTimeout(timer);
     }
-  }, [x, y]); // Re-position if x, y (passed from App context menu state) change
+  }, [x, y]); // Rerun if initial desired x, y change (i.e., menu is opened for a new cell/position)
 
 
   useEffect(() => {
@@ -93,11 +153,11 @@ function CellContextMenu({
   };
 
   const menuStyle = {
-    position: 'fixed',
+    position: 'fixed', // Fixed position is good for viewport-relative calculations
     zIndex: 3000,
     top: `${menuPosition.top}px`,
     left: `${menuPosition.left}px`,
-    transformOrigin: transformOrigin, // Dynamically set origin
+    transformOrigin: transformOrigin,
   };
 
   return (
@@ -131,6 +191,9 @@ function CellContextMenu({
               e.stopPropagation();
               // If you want to PREVENT selection if it's pencil-marked disabled:
               // if (isPencilMarkedDisabled) return; 
+              if (isPencilMarkedDisabled) {
+                return; // Prevent selection
+              }
               handleValueSelect(val);
             }}
             onContextMenu={(e) => handleRightClickValue(e, val)} // NEW: Handle right-click

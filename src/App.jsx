@@ -71,7 +71,7 @@ function App() {
   const toggleUserPencilMark = useCallback((row, col, value) => {
     setUserPencilMarks(prevMarks => {
       const cellKey = `${row}-${col}`;
-      const currentCellSpecificMarks = prevMarks[cellKey] ? [...prevMarks[cellKey]] : [];
+      const currentCellSpecificMarks = prevMarks[cellKey] ? [...prevMarks[cellKey]] : []; // Create a new array
       const markIndex = currentCellSpecificMarks.indexOf(value);
 
       if (markIndex > -1) {
@@ -79,15 +79,14 @@ function App() {
       } else {
         currentCellSpecificMarks.push(value);
       }
-      const newMarks = { // Create the new state object
+      
+      // Ensure a new object is returned for the state to trigger re-renders
+      return {
         ...prevMarks,
-        [cellKey]: currentCellSpecificMarks,
+        [cellKey]: currentCellSpecificMarks, // currentCellSpecificMarks is already a new array here
       };
-      // The re-render of App due to setUserPencilMarks will cause CellContextMenu to get new props.
-      // The key change in CellContextMenu's render in App.jsx will ensure it updates.
-      return newMarks;
     });
-  }, []); // Removed userPencilMarks from deps, it's being set
+  }, []);
 
   useEffect(() => {
     if (gameState === 'Playing') {
@@ -167,27 +166,53 @@ function App() {
         }
       }
       
-      // Calculate position based on cellElement
+      const cellRect = cellElement.getBoundingClientRect();
+      const approximateMenuWidth = 250; // Estimate, or get from a ref if consistently sized. 
+                                        // A rough estimate is often fine here.
+      const spaceRight = window.innerWidth - cellRect.right;
+      const spaceLeft = cellRect.left;
+
       let menuX, menuY;
-      const MENU_APPROXIMATE_HEIGHT = 25; // Estimate or calculate dynamically if possible
-      const MENU_OFFSET_Y = -5; // How many pixels above the cell
-      const MENU_LEFT_OFFSET_X = -20;
-      if (cellElement) {
-        const rect = cellElement.getBoundingClientRect();
-        // Position menu e.g., bottom-right of the cell or centered
-        // For simplicity, let's try to place it near the cell.
-        // This might need fine-tuning based on menu size.
-        menuX = rect.left + window.scrollX + MENU_LEFT_OFFSET_X; 
-        menuY = rect.top - MENU_APPROXIMATE_HEIGHT - MENU_OFFSET_Y + window.scrollY;
+      const MENU_APPROXIMATE_HEIGHT = 40; // Updated estimate for scaled menu
+      const MENU_VERTICAL_OFFSET = -10; // How many pixels above the cell to start the menu
+      const MENU_HORIZONTAL_OFFSET_IDEAL = -50; // e.g. try to open 10px to the right of the cell
+      const MENU_HORIZONTAL_OFFSET_SHIFT_LEFT = -approximateMenuWidth + cellRect.width - 10; // to position right edge of menu near right edge of cell
+
+      menuY = cellRect.top + window.scrollY + MENU_VERTICAL_OFFSET - MENU_APPROXIMATE_HEIGHT;
+
+      // Decide initial X based on space
+      if (spaceRight >= approximateMenuWidth + MENU_HORIZONTAL_OFFSET_IDEAL) {
+        // Enough space to the right, position it standardly (e.g., slightly to the right of cell)
+        menuX = cellRect.left + window.scrollX + MENU_HORIZONTAL_OFFSET_IDEAL;
+      } else if (spaceLeft >= approximateMenuWidth) {
+        // Not enough space to the right, but enough to the left to place the menu fully to the left of the cell
+        menuX = cellRect.left + window.scrollX - approximateMenuWidth - 10; // 10px gap
       } else {
-        // Fallback if cellElement is not available (shouldn't happen with new flow)
-        // This part of logic for x,y might be from a direct event.
-        // For now, if cellElement isn't passed, we might need a different source for x,y
-        // or assume it's an error. For the new flow, cellElement is key.
-        console.warn("handleOpenOrMoveCellContextMenu called without cellElement, positioning might be off.");
-        menuX = cellContextMenu.x || 0; // Keep previous or default
-        menuY = cellContextMenu.y || 0;
+        // Try to align menu's right edge with cell's right edge (or slightly offset)
+        // This is effectively what MENU_LEFT_OFFSET_X = -50 was trying to do if menu width ~70-80px
+        // menuX = cellRect.right + window.scrollX - approximateMenuWidth - 10; // Puts menu mostly to left
+        // A common strategy is to align the right edge of the menu with the right edge of the cell if opening left
+        menuX = cellRect.right + window.scrollX - approximateMenuWidth;
+        // The original MENU_LEFT_OFFSET_X = -50 was trying to position it relative to the cell's left.
+        // If cell is on right edge, and menu is, say, 200px wide, cell is 50px wide:
+        // ideal x = cell.left - 50. 
+        // If cell.left is viewportWidth - 50, then menu.left = viewportWidth - 100.
+        // If menu is 200px, menu.right = viewportWidth - 100 + 200 = viewportWidth + 100 (off screen).
+        // The old logic relied on CellContextMenu to fix it.
+        // Let's use the more robust CellContextMenu correction but App.jsx can provide a better starting desiredX.
+        // A common pattern is to try opening to bottom-right, then bottom-left, then top-right, then top-left.
+        // For a horizontal menu like this, it's mostly about left/right of the cell.
+        // Default to opening with its left edge near the cell's left edge, slightly offset.
+        // The fixed MENU_LEFT_OFFSET_X = -50 was an attempt at opening it centered or to the left.
+        // Let's assume for now the CellContextMenu's own correction is primary.
+        // The `x` passed to CellContextMenu should be the *desired menu.left*.
+        // App.jsx provides an initial guess.
+        const PREFERRED_MENU_LEFT_OFFSET = -50; // The previous value
+        menuX = cellRect.left + window.scrollX + PREFERRED_MENU_LEFT_OFFSET;
+        // menuY is already calculated above.
       }
+
+      // The CellContextMenu's internal logic will then ensure it stays fully on screen.
       const cellKey = `${row}-${col}`;
       const pencilMarksForThisCell = userPencilMarks[cellKey] || []; // Get current pencil marks for this cell
 
@@ -495,7 +520,10 @@ function App() {
       
       {cellContextMenu.visible && cellContextMenu.row !== null && cellContextMenu.col !== null && (
         <CellContextMenu
-          key={`${cellContextMenu.instanceKey}-${cellContextMenu.row}-${cellContextMenu.col}-${JSON.stringify(userPencilMarks[`${cellContextMenu.row}-${cellContextMenu.col}`] || [])}`}
+          // SIMPLIFIED KEY: Identifies the menu instance primarily by the cell it's for and its instanceKey from the hook.
+          // The instanceKey from useCellContextMenu is incremented only on full close/reset,
+          // which is appropriate for forcing a fresh mount.
+          key={`${cellContextMenu.instanceKey}-${cellContextMenu.row}-${cellContextMenu.col}`}
           x={cellContextMenu.x}
           y={cellContextMenu.y}
           gridSize={gridSize}
@@ -503,9 +531,12 @@ function App() {
           onClose={handleCloseCellContextMenu}
           isFilteringEnabled={cellContextMenu.isFilteringActiveForMenu}
           validNumbersList={cellContextMenu.validNumbersForMenu}
-          // ---- MODIFIED PROP SOURCE ----
-          userPencilMarksForCell={userPencilMarks[`${cellContextMenu.row}-${cellContextMenu.col}`] || []}
-          // ---- END MODIFIED PROP SOURCE ----
+          // Pass a new array reference for userPencilMarksForCell if it exists
+          userPencilMarksForCell={ // Ensure this is a new array reference if possible for React's shallow comparison
+            // This already gets a new array from the `userPencilMarks` state update due to how
+            // `toggleUserPencilMark` constructs its new state.
+            userPencilMarks[`${cellContextMenu.row}-${cellContextMenu.col}`] || []
+          }
           onToggleUserPencilMark={(value) => {
             if (cellContextMenu.row !== null && cellContextMenu.col !== null) {
               toggleUserPencilMark(cellContextMenu.row, cellContextMenu.col, value);
