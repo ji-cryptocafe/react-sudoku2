@@ -21,179 +21,126 @@ import { useSudokuGame } from './hooks/useSudokuGame';
 import './App.css';
 
 function App() {
-  // NEW STATE for Corner Notes
-  // Structure: { "row-col": value (or EMPTY_CELL_VALUE if none) }
-  const [cornerMarks, setCornerMarks] = useState({});
-  const [isCornerNoteModeActive, setIsCornerNoteModeActive] = useState(false);
-  const [isMouseOverGrid, setIsMouseOverGrid] = useState(false); // NEW STATE
   const {
-    gridSize,
-    setGridSize,
-    difficulty,
-    setDifficulty,
-    initialCluesBoard,
-    solutionBoard, // Keep if needed for direct access, e.g. by Cell
-    userBoard,
-    cellTypesBoard,
-    gameState,
-    gameMessage,
-    lockedCells,
-    hintedCells,
-    hintUsesLeft,
-    startGame, // This is internalStartGame from the hook
-    handleCellInputValue,
-    // cycleCellValue,
-    checkSolution,
-    toggleLock,
-    requestHint,
-    isCellClue,
-    isCellLocked,
+    gridSize, setGridSize, difficulty, setDifficulty,
+    initialCluesBoard, solutionBoard, userBoard, cellTypesBoard,
+    gameState, gameMessage, lockedCells, hintedCells, hintUsesLeft,
+    startGame, handleCellInputValue, checkSolution, toggleLock: originalToggleLock, // Renamed to avoid conflict
+    requestHint, isCellClue, isCellLocked,
   } = useSudokuGame(GRID_SIZES.S9, DIFFICULTIES.MEDIUM);
 
   const [selectedCell, setSelectedCell] = useState(null);
   const [hoveredCell, setHoveredCell] = useState(null);
   const [isFilteringEnabled, setIsFilteringEnabled] = useState(false);
 
-  // NEW STATE: Store user's right-click disabled notes (pencil marks)
-  // Structure: { "row-col": [value1, value2], ... }
+  // State for pencil marks (strike-throughs in context menu)
   const [userPencilMarks, setUserPencilMarks] = useState({});
+  // State for candidate marks (multiple small numbers in a cell)
+  const [candidateMarks, setCandidateMarks] = useState({});
+  // State for candidate entry mode
+  const [isCandidateModeActive, setIsCandidateModeActive] = useState(false);
+  
+  // State for context menu session tracking (for auto-population)
+  const [menuSessionInitialPencilMarks, setMenuSessionInitialPencilMarks] = useState([]);
+  const [menuSessionMadeCandidateSelections, setMenuSessionMadeCandidateSelections] = useState(false);
 
   const { elapsedTime, startTimer, stopTimer, resetTimer } = useTimer();
-  const { isNewGameModalOpen, openNewGameModal, closeNewGameModal } = useNewGameModal();
+  const { isNewGameModalOpen, openNewGameModal, closeNewGameModal: closeNewGameModalHook } = useNewGameModal();
   const {
-    cellContextMenu,
-    openMenu: openContextMenu,
-    closeMenu: closeContextMenuAction,
-    closeMenuAndResetKey: closeContextMenuAndResetKeyAction,
+    cellContextMenu, openMenu: openContextMenuHook,
+    closeMenu: closeContextMenuActionHook,
+    closeMenuAndResetKey: closeContextMenuAndResetKeyActionHook,
   } = useCellContextMenu();
 
   const closeAllPopups = useCallback(() => {
-    closeNewGameModal();
-    closeContextMenuAndResetKeyAction();
-  }, [closeNewGameModal, closeContextMenuAndResetKeyAction]);
-
-  // NEW FUNCTION: Toggle a user's pencil mark for a cell and value
-  const toggleUserPencilMark = useCallback((row, col, value) => {
-    setUserPencilMarks(prevMarks => {
-      const cellKey = `${row}-${col}`;
-      const currentCellSpecificMarks = prevMarks[cellKey] ? [...prevMarks[cellKey]] : []; // Create a new array
-      const markIndex = currentCellSpecificMarks.indexOf(value);
-
-      if (markIndex > -1) {
-        currentCellSpecificMarks.splice(markIndex, 1);
-      } else {
-        currentCellSpecificMarks.push(value);
-      }
-
-      // Ensure a new object is returned for the state to trigger re-renders
-      return {
-        ...prevMarks,
-        [cellKey]: currentCellSpecificMarks, // currentCellSpecificMarks is already a new array here
-      };
-    });
-  }, []);
+    closeNewGameModalHook();
+    closeContextMenuAndResetKeyActionHook();
+  }, [closeNewGameModalHook, closeContextMenuAndResetKeyActionHook]);
 
   useEffect(() => {
     if (gameState === 'Playing') {
       resetTimer();
       startTimer();
-      // closeAllPopups();
     } else if (gameState === 'Won' || gameState === 'Failed') {
       stopTimer();
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [gameState]); // resetTimer, startTimer, closeAllPopups are stable from their hooks
-
-
+  }, [gameState, startTimer, stopTimer, resetTimer]);
+ 
   const handleCheckSolution = useCallback(() => {
-    if (cellContextMenu.visible) {
-      closeContextMenuAndResetKeyAction();
-    }
+    if (cellContextMenu.visible) closeContextMenuAndResetKeyActionHook();
     if (gameState !== 'Playing') return;
-    checkSolution(); // This will update gameState internally in the hook
-    // The useEffect above will catch gameState change for stopTimer
-  }, [cellContextMenu.visible, closeContextMenuAndResetKeyAction, gameState, checkSolution]);
+    checkSolution();
+  }, [cellContextMenu.visible, closeContextMenuAndResetKeyActionHook, gameState, checkSolution]);
 
   const handleNewGameRequest = useCallback(() => {
-    if (cellContextMenu.visible) {
-      closeContextMenuAndResetKeyAction();
-    }
+    if (cellContextMenu.visible) closeContextMenuAndResetKeyActionHook();
     openNewGameModal();
-  }, [openNewGameModal, cellContextMenu.visible, closeContextMenuAndResetKeyAction]);
-
-  const handleCloseNewGameModal = useCallback(() => {
-    closeNewGameModal();
-  }, [closeNewGameModal]);
+  }, [openNewGameModal, cellContextMenu.visible, closeContextMenuAndResetKeyActionHook]);
 
   const handleStartGameFromModal = useCallback(
     (newSize, newDifficulty) => {
       closeAllPopups();
-      setUserPencilMarks({}); // Clear pencil marks for a new game
-      setCornerMarks({}); // CLEAR CORNER MARKS
-      setIsCornerNoteModeActive(false); // Reset mode
-      // These will trigger the useEffect in useSudokuGame to call internalStartGame
+      setUserPencilMarks({});
+      setCandidateMarks({});
+      setIsCandidateModeActive(false);
       setGridSize(newSize);
       setDifficulty(newDifficulty);
-      // If size and difficulty are the same, the useEffect in useSudokuGame will still run
-      // because internalStartGame's deps (gridSize, difficulty) will have new references.
-      // However, if you *really* want to force a new puzzle of the *exact same* config,
-      // the current `startGame` from the hook can be called.
       if (newSize === gridSize && newDifficulty === difficulty) {
-        startGame(); // Call the hook's startGame to ensure re-generation
+        startGame();
       }
     },
     [closeAllPopups, setGridSize, setDifficulty, gridSize, difficulty, startGame]
   );
-  // Toggle Corner Note Mode
-  const handleToggleCornerNoteMode = () => {
-    setIsCornerNoteModeActive(prev => !prev);
-    if (cellContextMenu.visible) { // Close context menu if it's open when mode changes
-      closeContextMenuAndResetKeyAction();
-    }
+
+  const handleToggleFilter = () => setIsFilteringEnabled(prev => !prev);
+  const handleToggleCandidateMode = () => {
+    setIsCandidateModeActive(prev => !prev);
+    if (cellContextMenu.visible) closeContextMenuAndResetKeyActionHook();
   };
-  // NEW: Function to set a corner mark value
-  const setCellCornerMark = useCallback((row, col, value) => {
-    setCornerMarks(prev => ({
-      ...prev,
-      [`${row}-${col}`]: value,
-    }));
+
+  const toggleCellCandidateMark = useCallback((row, col, value) => {
+    setCandidateMarks(prev => {
+      const cellKey = `${row}-${col}`;
+      const currentCandidates = prev[cellKey] ? [...prev[cellKey]] : [];
+      const index = currentCandidates.indexOf(value);
+      if (index > -1) currentCandidates.splice(index, 1);
+      else {
+        currentCandidates.push(value);
+        currentCandidates.sort((a, b) => a - b);
+      }
+      return { ...prev, [cellKey]: currentCandidates };
+    });
+    setMenuSessionMadeCandidateSelections(true);
   }, []);
 
-  // NEW: Function to clear a corner mark value (e.g., on right-click or when cell is locked)
-  const clearCellCornerMark = useCallback((row, col) => {
-    setCornerMarks(prev => {
+  const clearCellCandidateMarks = useCallback((row, col) => {
+    setCandidateMarks(prev => {
       const newMarks = { ...prev };
       delete newMarks[`${row}-${col}`];
       return newMarks;
     });
   }, []);
 
-  const handleActualRequestHint = useCallback(() => { // Renamed to avoid conflict
-    requestHint();
-  }, [requestHint]);
+  const toggleUserPencilMarkForMenu = useCallback((row, col, value) => {
+    setUserPencilMarks(prevMarks => {
+      const cellKey = `${row}-${col}`;
+      const currentCellMarks = prevMarks[cellKey] ? [...prevMarks[cellKey]] : [];
+      const markIndex = currentCellMarks.indexOf(value);
+      if (markIndex > -1) currentCellMarks.splice(markIndex, 1);
+      else currentCellMarks.push(value);
+      return { ...prevMarks, [cellKey]: currentCellMarks };
+    });
+  }, []);
 
-  const handleCloseCellContextMenu = useCallback(() => {
-    closeContextMenuAction();
-  }, [closeContextMenuAction]);
-
-  // --- MODIFIED: handleOpenCellContextMenu ---
-  // Now takes cellElement to calculate position
-  // --- MODIFIED: handleOpenOrMoveCellContextMenu ---
-  const handleOpenOrMoveCellContextMenu = useCallback(
-    // Add menuContext: 'main' | 'corner'
-    (row, col, cellElement, menuContext = 'main') => {
-      if (menuContext === 'main' && (isCellLocked(row, col) || isCellClue(row, col))) {
-        closeContextMenuAndResetKeyAction();
+  const openActualContextMenu = useCallback(
+    (row, col, cellElement) => {
+      if (isCellLocked(row, col) || isCellClue(row, col)) {
+        closeContextMenuAndResetKeyActionHook();
         return;
       }
-      // For corner notes, we might allow opening even if cell is locked,
-      // but the feature spec says corner note disappears when locked, so this check is fine.
-
-      if (isNewGameModalOpen) closeNewGameModal();
+      if (isNewGameModalOpen) closeNewGameModalHook();
 
       let validNumbersList = null;
-      // Filtering might apply differently or not at all for corner notes
-      // For now, assume filtering applies the same way.
       if (isFilteringEnabled) {
         if (initialCluesBoard && initialCluesBoard.length === gridSize) {
           validNumbersList = getValidNumbersForCell(initialCluesBoard, row, col, gridSize);
@@ -201,277 +148,227 @@ function App() {
           validNumbersList = Array.from({ length: gridSize }, (_, i) => i);
         }
       }
-
+      
       let menuX, menuY;
-      // Position calculations (can be refined later if corner box click gives different coords)
-      if (cellElement) { // cellElement could be the main cell or the corner box
+      if (cellElement) {
         const rect = cellElement.getBoundingClientRect();
-        const MENU_APPROXIMATE_HEIGHT = 40;
-        const MENU_OFFSET_Y = -10;
-
-        if (menuContext === 'corner') {
-          // Position relative to the corner box element
-          menuX = rect.left + window.scrollX; // Align left with corner box
-          menuY = rect.bottom + window.scrollY + 5; // Below corner box
-        } else { // 'main'
-          const MENU_LEFT_OFFSET_X = -50;
-          menuX = rect.left + window.scrollX + MENU_LEFT_OFFSET_X;
-          menuY = rect.top + window.scrollY - MENU_APPROXIMATE_HEIGHT + MENU_OFFSET_Y;
-        }
+        const MENU_APPROXIMATE_HEIGHT = 40; 
+        const MENU_OFFSET_Y = -10; 
+        const MENU_LEFT_OFFSET_X = -50;
+        menuX = rect.left + window.scrollX + MENU_LEFT_OFFSET_X; 
+        menuY = rect.top + window.scrollY - MENU_APPROXIMATE_HEIGHT + MENU_OFFSET_Y;
       } else {
-        menuX = cellContextMenu.x || 0;
+        menuX = cellContextMenu.x || 0; 
         menuY = cellContextMenu.y || 0;
       }
 
       const cellKey = `${row}-${col}`;
-      const pencilMarksForThisCell = userPencilMarks[cellKey] || [];
-
-      // Pass menuContext to openContextMenu
-      openContextMenu(menuX, menuY, row, col, validNumbersList, isFilteringEnabled, pencilMarksForThisCell, menuContext);
-      setSelectedCell({ row, col }); // Select the main cell regardless
-    },
-    [
-      isCellLocked, isCellClue, closeContextMenuAndResetKeyAction,
-      isNewGameModalOpen, closeNewGameModal, isFilteringEnabled,
-      initialCluesBoard, gridSize, openContextMenu, cellContextMenu.x, cellContextMenu.y,
-      userPencilMarks
-    ]
-  );
-
-  // --- MODIFIED: handleSelectValueFromContextMenu ---
-  const handleSelectValueFromContextMenu = useCallback(
-    (value) => {
-      const { row: targetRow, col: targetCol, menuContext } = cellContextMenu; // Get menuContext
-      if (targetRow !== null && targetCol !== null) {
-        if (targetRow >= gridSize || targetCol >= gridSize || targetRow < 0 || targetCol < 0) {
-          console.error("Context menu target out of bounds.", { targetRow, targetCol, gridSize });
-        } else {
-          if (menuContext === 'corner') {
-            setCellCornerMark(targetRow, targetCol, value);
-          } else { // 'main'
-            handleCellInputValue(targetRow, targetCol, value);
-          }
-        }
-      }
-      closeContextMenuAndResetKeyAction();
-    },
-    [cellContextMenu, gridSize, handleCellInputValue, setCellCornerMark, closeContextMenuAndResetKeyAction]
-  );
-
-  // Modify handleCellClick
-  const handleCellClick = useCallback(
-    (row, col, event, cellElement) => { // Receives event and cellElement
-      const clickedCellType = cellTypesBoard[row]?.[col];
-
-      // NEW BEHAVIOR FOR 'standard' and 'morphing' cells: Open/Move Menu
-      if (clickedCellType === 'morphing' || clickedCellType === 'standard' || clickedCellType === 'flipping') {
-        if (cellContextMenu.visible && cellContextMenu.row === row && cellContextMenu.col === col && cellContextMenu.menuContext === 'main') {
-          return;
-        }
-        // Open menu for 'main' cell context
-        handleOpenOrMoveCellContextMenu(row, col, cellElement, 'main');
-        return; // End here for these cell types
-      }
-
-      // --- Logic for other cell types (e.g., FlippingCell if it retains old behavior) ---
-      // Or, if all interactive cells should open menu, this section might be removed.
-
-      // Default behavior for clicks NOT on morphing/standard or if menu logic doesn't apply:
-      // (This part might need adjustment based on how FlippingCell will behave)
-
-      // If menu is open AND the click is NOT on the cell associated with the menu, close it.
-      // This is a general rule that should apply if the click didn't already handle the menu.
-      if (cellContextMenu.visible && (cellContextMenu.row !== row || cellContextMenu.col !== col)) {
-        closeContextMenuAndResetKeyAction();
-      }
-      if (isCellLocked(row, col)) {
-        setSelectedCell({ row, col });
-        return;
-      }
-      if (gameState !== 'Playing' || isCellClue(row, col)) {
-        setSelectedCell(null);
-        if (cellContextMenu.visible) closeContextMenuAndResetKeyAction();
-        return;
-      }
+      const currentMenuPencilMarks = userPencilMarks[cellKey] || [];
+      setMenuSessionInitialPencilMarks(currentMenuPencilMarks);
+      setMenuSessionMadeCandidateSelections(false);
+      openContextMenuHook(menuX, menuY, row, col, validNumbersList, isFilteringEnabled);
       setSelectedCell({ row, col });
     },
-    [
-      cellTypesBoard, cellContextMenu, closeContextMenuAndResetKeyAction,
-      handleOpenOrMoveCellContextMenu, isCellLocked, gameState, isCellClue,
+    [ isCellLocked, isCellClue, closeContextMenuAndResetKeyActionHook, isNewGameModalOpen, closeNewGameModalHook,
+      isFilteringEnabled, initialCluesBoard, gridSize, openContextMenuHook, userPencilMarks, cellContextMenu.x, cellContextMenu.y
     ]
   );
 
-  // NEW: Handler for clicking the corner note box itself (to be passed to cell components)
-  const handleCornerNoteBoxClick = useCallback(
-    (row, col, event, cornerBoxElement) => {
-      event.stopPropagation(); // Prevent main cell click
-      if (isCellLocked(row, col) || isCellClue(row, col)) return; // Should not be visible anyway if locked/clue
+  const handleSelectValueFromMenu = useCallback(
+    (value) => {
+      const { row: targetRow, col: targetCol } = cellContextMenu;
+      if (targetRow === null || targetCol === null) return;
 
-      if (cellContextMenu.visible && cellContextMenu.row === row && cellContextMenu.col === col && cellContextMenu.menuContext === 'corner') {
-        // Optional: close if clicking same corner box again while its menu is open
-        // closeContextMenuAndResetKeyAction();
-        return;
+      if (isCandidateModeActive) {
+        toggleCellCandidateMark(targetRow, targetCol, value);
+        // If in candidate mode, also clear the main cell value if it's not empty
+        // and candidates are being added/toggled. This prevents main value + candidates.
+        if (userBoard[targetRow][targetCol] !== EMPTY_CELL_VALUE) {
+            handleCellInputValue(targetRow, targetCol, EMPTY_CELL_VALUE);
+        }
+      } else {
+        handleCellInputValue(targetRow, targetCol, value);
+        clearCellCandidateMarks(targetRow, targetCol);
+        closeContextMenuAndResetKeyActionHook();
       }
-      handleOpenOrMoveCellContextMenu(row, col, cornerBoxElement, 'corner');
     },
-    [handleOpenOrMoveCellContextMenu, isCellLocked, isCellClue, cellContextMenu]
+    [ cellContextMenu, isCandidateModeActive, toggleCellCandidateMark, handleCellInputValue,
+      clearCellCandidateMarks, closeContextMenuAndResetKeyActionHook, userBoard
+    ]
   );
 
-  // NEW: Handler for right-clicking the corner note display area (to be passed to cell)
-  const handleCornerNoteRightClick = useCallback((row, col, event) => {
-    event.preventDefault();
-    event.stopPropagation();
-    if (isCellLocked(row, col) || isCellClue(row, col)) return;
+  const closeActualContextMenu = useCallback(() => {
+    const { row, col, visible } = cellContextMenu;
+    if (!visible || row === null || col === null) {
+      closeContextMenuActionHook();
+      return;
+    }
 
-    clearCellCornerMark(row, col);
-  }, [clearCellCornerMark, isCellLocked, isCellClue]);
+    if (isCandidateModeActive && !menuSessionMadeCandidateSelections) {
+      const cellKey = `${row}-${col}`;
+      const currentPencilMarksInMenu = userPencilMarks[cellKey] || [];
+      const initialPencilMarks = menuSessionInitialPencilMarks; // Use captured initial marks
 
-  // Modify toggleLock to also clear corner mark if cell is locked
-  const handleToggleLockCell = useCallback(
+      const pencilMarksChangedThisSession = currentPencilMarksInMenu.length !== initialPencilMarks.length ||
+                                 currentPencilMarksInMenu.some(mark => !initialPencilMarks.includes(mark)) ||
+                                 initialPencilMarks.some(mark => !currentPencilMarksInMenu.includes(mark));
+
+      if (pencilMarksChangedThisSession) {
+        const allPossibleValues = Array.from({ length: gridSize }, (_, i) => i);
+        const leftoverValues = allPossibleValues.filter(v => !currentPencilMarksInMenu.includes(v));
+        
+        const currentCellCandidates = candidateMarks[cellKey] || [];
+        const newCandidatesAreDifferent = leftoverValues.length !== currentCellCandidates.length ||
+                                          leftoverValues.some(v => !currentCellCandidates.includes(v));
+        
+        if (leftoverValues.length > 0) {
+          if(newCandidatesAreDifferent) {
+            setCandidateMarks(prev => ({ ...prev, [cellKey]: leftoverValues.sort((a,b)=>a-b) }));
+             if (userBoard[row][col] !== EMPTY_CELL_VALUE) { // Clear main value if auto-populating candidates
+                handleCellInputValue(row, col, EMPTY_CELL_VALUE);
+            }
+          }
+        } else if (currentCellCandidates.length > 0) {
+          clearCellCandidateMarks(row, col);
+        }
+      }
+    }
+    closeContextMenuActionHook();
+  }, [ cellContextMenu, isCandidateModeActive, menuSessionMadeCandidateSelections, userPencilMarks,
+       menuSessionInitialPencilMarks, gridSize, candidateMarks, setCandidateMarks,
+       clearCellCandidateMarks, closeContextMenuActionHook, userBoard, handleCellInputValue
+  ]);
+
+  const handleCellClick = useCallback(
+    (row, col, event, cellElement) => {
+      const cellIsCurrentlyLocked = isCellLocked(row, col);
+      const cellIsCurrentlyClue = isCellClue(row, col);
+
+      if (cellIsCurrentlyLocked || cellIsCurrentlyClue) {
+          if (cellContextMenu.visible) closeContextMenuAndResetKeyActionHook();
+          setSelectedCell({row, col});
+          return;
+      }
+      // If not locked or clue, proceed to open context menu
+      if (cellContextMenu.visible && cellContextMenu.row === row && cellContextMenu.col === col) {
+         // If clicking the same cell and menu is already open for it.
+         // In candidate mode, this could be a signal to close and apply auto-population.
+         if (isCandidateModeActive) {
+            closeActualContextMenu(); // This will handle auto-population if conditions met
+            return;
+         }
+         // In non-candidate mode, clicking the same cell again does nothing (user must select from menu or click off)
+         return; 
+      }
+      openActualContextMenu(row, col, cellElement);
+    },
+    [ cellContextMenu, closeContextMenuAndResetKeyActionHook, openActualContextMenu,
+      isCellLocked, isCellClue, isCandidateModeActive, closeActualContextMenu
+    ]
+  );
+
+  const toggleLockAndManageCandidates = useCallback(
     (row, col) => {
-      const wasLocked = isCellLocked(row, col); // Check before toggle
-      toggleLock(row, col); // Original toggleLock from useSudokuGame
-
-      // If the cell is *becoming* locked, clear its corner mark
-      // Need to check the state *after* toggleLock has its effect.
-      // This is tricky because isCellLocked might not update immediately for this callback.
-      // Let's assume toggleLock updates the lockedCells state synchronously enough for the next render.
-      // Or, more robustly, if the cell *will be* locked.
-      // For now, let's clear it if it *wasn't* locked and now *is* (or vice-versa for unlocking)
-      // The simplest for "when user locks a cell, the optional value box should disappear"
-      // is to clear it when it becomes locked.
-      // If it becomes locked, the `isCellLocked(row,col)` will be true in the *next* render cycle for the cell.
-      // The cell itself will hide the corner note display if locked.
-      // To clear the *data*, we can do it here.
-      if (!wasLocked) { // If it wasn't locked, and toggleLock is called, it will become locked
-        clearCellCornerMark(row, col);
+      const cellIsCurrentlyLocked = isCellLocked(row, col);
+      originalToggleLock(row, col); // Call the hook's toggleLock
+      if (!cellIsCurrentlyLocked) { // Cell is becoming locked
+        clearCellCandidateMarks(row, col);
       }
     },
-    [toggleLock, isCellLocked, clearCellCornerMark]
+    [originalToggleLock, isCellLocked, clearCellCandidateMarks]
   );
 
-
-  // --- NEW: Global click listener to close context menu ---
   useEffect(() => {
     const handleGlobalClickForMenuClose = (event) => {
       if (!cellContextMenu.visible) return;
-
-      // Check if the click is outside the Sudoku grid and also outside the context menu itself
-      const gridElement = document.getElementById('canvas-container-main'); // Or more specific grid ID
-      const menuElement = document.querySelector('.cell-context-menu'); // Assumes only one menu
-
+      const gridElement = document.getElementById('canvas-container-main');
+      const menuElement = document.querySelector('.cell-context-menu');
       const isClickOutsideGrid = gridElement && !gridElement.contains(event.target);
       const isClickOutsideMenu = menuElement && !menuElement.contains(event.target);
 
-      if (isClickOutsideGrid && isClickOutsideMenu) {
-        // Clicked outside of game area and outside of the menu itself
-        closeContextMenuAndResetKeyAction();
-      } else if (isClickOutsideMenu) {
-        // Click was inside grid but outside menu.
-        // Check if it was on a clue or locked cell (which should also close the menu)
-        // This part is tricky as we don't have row/col from a global click easily.
-        // The `handleCellClick` for individual cells should handle closing if it was on a clue/locked.
-        // So, this global listener focuses on clicks *truly* outside interactive game elements.
-
-        // More robust: check if the click target is part of the game board cells.
-        // If not, and it's outside the menu, close.
+      if (isClickOutsideMenu) { // If click is outside the menu itself
+        // Check if it's also outside the grid or on a non-cell part of the grid
         let targetIsCell = false;
         if (gridElement && gridElement.contains(event.target)) {
-          let el = event.target;
-          while (el && el !== gridElement) {
-            if (el.classList.contains('morphing-cell') || el.classList.contains('standard-cell') || el.classList.contains('flipping-cell')) {
-              targetIsCell = true;
-              break;
+            let el = event.target;
+            while(el && el !== gridElement) {
+                if (el.classList.contains('cell')) { // Generic cell class
+                    targetIsCell = true;
+                    break;
+                }
+                el = el.parentElement;
             }
-            el = el.parentElement;
-          }
         }
-        // If click is outside menu AND (outside grid OR not on any cell within grid)
-        if (isClickOutsideMenu && (isClickOutsideGrid || !targetIsCell)) {
-          // If it's a click on a non-interactive part of the grid (but not a cell that would open/move menu)
-          // or completely outside the grid.
-          // This relies on `handleCellClick` for specific cell interactions.
-          // The primary role here is for "click off" behavior.
-          // closeContextMenuAndResetKeyAction(); // This might be too aggressive.
-          // Let's rely on specific cell clicks to handle menu.
-          // This global handler is now mainly for clicks *really* outside.
+        if (isClickOutsideGrid || !targetIsCell) {
+             closeActualContextMenu(); // Use the smart close
         }
-        // If it's a click on a clue/locked cell, `handleCellClick` will be triggered by that cell
-        // and it should call `closeContextMenuAndResetKeyAction` if appropriate.
-        // This global handler is more for clicks completely outside interactive elements.
-        if (isClickOutsideGrid && isClickOutsideMenu) {
-          closeContextMenuAndResetKeyAction();
-        }
-
+        // If click was on another cell, handleCellClick for that cell will take over.
       }
     };
-
-    // Add listener when component mounts or menu visibility changes
     document.addEventListener('mousedown', handleGlobalClickForMenuClose);
-    return () => {
-      document.removeEventListener('mousedown', handleGlobalClickForMenuClose);
-    };
-  }, [cellContextMenu.visible, closeContextMenuAndResetKeyAction]);
-
+    return () => document.removeEventListener('mousedown', handleGlobalClickForMenuClose);
+  }, [cellContextMenu.visible, closeActualContextMenu]);
 
   useEffect(() => {
     if (!cellContextMenu.visible) return;
-    const closeMenuOnScroll = () => closeContextMenuAndResetKeyAction();
+    const closeMenuOnScroll = () => closeActualContextMenu();
     window.addEventListener('scroll', closeMenuOnScroll, true);
     return () => window.removeEventListener('scroll', closeMenuOnScroll, true);
-  }, [cellContextMenu.visible, closeContextMenuAndResetKeyAction]);
+  }, [cellContextMenu.visible, closeActualContextMenu]);
 
-  // Keyboard navigation: Removed direct cell value setting.
-  // Keyboard input should now probably select a cell and then the user uses the menu.
-  // Or, for speed, keyboard could still directly input if menu is NOT open.
-  // This part needs careful consideration based on desired UX.
-  // For now, let's simplify: keyboard input only works if menu is NOT open.
   const handleKeyDown = useCallback(
     (event) => {
-      if (gameState !== 'Playing' || isNewGameModalOpen || cellContextMenu.visible) { // Block if menu is open
-        return;
-      }
-      // ... (rest of handleKeyDown logic for Tab and number input for hoveredCell)
-      // Number input logic from original handleKeyDown:
+      if (gameState !== 'Playing' || isNewGameModalOpen || cellContextMenu.visible) return;
       const { key } = event;
-      if (key === 'Tab') { /* ... Tab logic ... */ return; }
+      if (key === 'Tab') { event.preventDefault(); /* Tab logic can be complex, skip for now */ return; }
 
       if (hoveredCell && initialCluesBoard.length > 0 && userBoard.length > 0) {
         const { row, col } = hoveredCell;
-        const cellType = cellTypesBoard[row]?.[col];
-        // Direct keyboard input might bypass the menu for non-morphing cells,
-        // or we might decide all input goes via menu.
-        // For now, allow direct input if menu is not open.
         if (isCellClue(row, col) || isCellLocked(row, col)) return;
 
         const internalValue = getInternalValueFromKey(key, gridSize);
         if (internalValue !== null) {
-          if (isFilteringEnabled) {
-            const validNumbers = getValidNumbersForCell(initialCluesBoard, row, col, gridSize);
-            if (validNumbers.includes(internalValue) || internalValue === EMPTY_CELL_VALUE) {
-              handleCellInputValue(row, col, internalValue);
+          if (isCandidateModeActive) {
+            // If 'c' or some other key is pressed, could toggle candidate mode too
+            // For number keys in candidate mode, add/remove from candidates
+            toggleCellCandidateMark(row, col, internalValue);
+            if (userBoard[row][col] !== EMPTY_CELL_VALUE) { // Clear main value if adding candidates via keyboard
+                handleCellInputValue(row, col, EMPTY_CELL_VALUE);
             }
           } else {
-            handleCellInputValue(row, col, internalValue);
+            // Regular input mode
+            if (isFilteringEnabled) {
+              const validNumbers = getValidNumbersForCell(initialCluesBoard, row, col, gridSize);
+              if (validNumbers.includes(internalValue) || internalValue === EMPTY_CELL_VALUE) {
+                handleCellInputValue(row, col, internalValue);
+                clearCellCandidateMarks(row, col);
+              }
+            } else {
+              handleCellInputValue(row, col, internalValue);
+              clearCellCandidateMarks(row, col);
+            }
           }
+        } else if (key === 'Backspace' || key === 'Delete') {
+            if(isCandidateModeActive && candidateMarks[`${row}-${col}`]?.length > 0){
+                clearCellCandidateMarks(row, col)
+            } else {
+                 handleCellInputValue(row, col, EMPTY_CELL_VALUE); // Clear main value
+                 clearCellCandidateMarks(row, col); // Also clear candidates
+            }
         }
       }
     },
-    [ // Add all dependencies
-      gameState, isNewGameModalOpen, cellContextMenu.visible, hoveredCell, selectedCell,
-      gridSize, initialCluesBoard, userBoard, cellTypesBoard, isCellLocked, isCellClue,
-      handleCellInputValue, isFilteringEnabled,
+    [ gameState, isNewGameModalOpen, cellContextMenu.visible, hoveredCell, 
+      initialCluesBoard, userBoard, gridSize, isCellClue, isCellLocked, 
+      isCandidateModeActive, toggleCellCandidateMark, handleCellInputValue, 
+      isFilteringEnabled, clearCellCandidateMarks, candidateMarks
     ]
   );
-
+  
   useEffect(() => {
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [handleKeyDown]);
-
-  const handleToggleFilter = () => {
-    setIsFilteringEnabled((prev) => !prev);
-  };
 
   return (
     <div className="app-container">
@@ -489,26 +386,29 @@ function App() {
 
         <div id="game-area">
           <div id="play-area-wrapper">
-            {/* ... sidebars ... */}
             <div id="left-sidebar" className="sidebar">
               <button
                 className={`sidebar-button ${isFilteringEnabled ? 'active' : ''}`}
-                aria-label="Toggle Value Filtering"
-                onClick={handleToggleFilter /* define this handler */}
-                title={isFilteringEnabled ? "Disable Clue-Based Filtering" : "Enable Clue-Based Filtering"}
+                onClick={handleToggleFilter}
+                title={isFilteringEnabled ? "Disable Value Filtering" : "Enable Value Filtering"}
               >
-                Filt
+                Filter
               </button>
               <button
                 className={`sidebar-button ${hintUsesLeft <= 0 || hintedCells.length > 0 || gameState !== 'Playing' ? 'disabled' : ''}`}
-                aria-label="Get Hint"
-                onClick={requestHint} // Directly use from hook
+                onClick={requestHint}
                 disabled={hintUsesLeft <= 0 || gameState !== 'Playing' || hintedCells.length > 0}
                 title={`Get a hint (${hintUsesLeft} left)`}
               >
-                Hnt {hintUsesLeft > 0 ? `(${hintUsesLeft})` : ''}
+                Hint {hintUsesLeft > 0 ? `(${hintUsesLeft})` : ''}
               </button>
-              <button className="sidebar-button" aria-label="Upgrade 3">L3</button>
+              <button
+                className={`sidebar-button ${isCandidateModeActive ? 'active' : ''}`}
+                onClick={handleToggleCandidateMode}
+                title={isCandidateModeActive ? "Switch to Single Value Mode" : "Switch to Candidate (Pencil Mark) Mode"}
+              >
+                Multi
+              </button>
             </div>
             <div id="canvas-container-main">
               <div id="canvas-container">
@@ -519,26 +419,21 @@ function App() {
                     gridSize={gridSize}
                     initialCluesBoard={initialCluesBoard}
                     userBoard={userBoard}
-                    solutionBoard={solutionBoard}
+                    solutionBoard={solutionBoard} 
                     cellTypesBoard={cellTypesBoard}
                     selectedCell={selectedCell}
                     hoveredCell={hoveredCell}
                     setHoveredCell={setHoveredCell}
-                    onCellClick={handleCellClick} // This now passes (row, col, event, cellElement)
-                    // onCellContextMenu: This might be removed or adapted if no cells use right-click for menu
+                    onCellClick={handleCellClick}
                     gameState={gameState}
                     lockedCells={lockedCells}
-                    onToggleLock={toggleLock} // Use from hook
-                    // --- NEW PROPS for Corner Notes ---
-                    cornerMarks={cornerMarks}
-                    isCornerNoteModeActive={isCornerNoteModeActive}
-                    onCornerNoteBoxClick={handleCornerNoteBoxClick}
-                    onCornerNoteRightClick={handleCornerNoteRightClick}
+                    onToggleLock={toggleLockAndManageCandidates}
                     hintedCells={hintedCells}
-                    // ---- NEW PROPS FOR HOVER FIX ----
                     cellContextMenuVisible={cellContextMenu.visible}
                     cellContextMenuRow={cellContextMenu.row}
                     cellContextMenuCol={cellContextMenu.col}
+                    candidateMarks={candidateMarks}
+                    isCandidateModeActive={isCandidateModeActive}
                   />
                 )}
               </div>
@@ -557,33 +452,31 @@ function App() {
       {isNewGameModalOpen && (
         <NewGameModal
           isOpen={isNewGameModalOpen}
-          onClose={handleCloseNewGameModal}
+          onClose={closeNewGameModalHook}
           currentGridSize={gridSize}
           currentDifficulty={difficulty}
           onStartNewGame={handleStartGameFromModal}
         />
       )}
-
+      
       {cellContextMenu.visible && cellContextMenu.row !== null && cellContextMenu.col !== null && (
         <CellContextMenu
-          // Key should ideally also include menuContext if it affects rendering significantly
-          // or if different types of menus might look different. For now, this is probably fine.
-          key={`${cellContextMenu.instanceKey}-${cellContextMenu.row}-${cellContextMenu.col}-${cellContextMenu.menuContext}`}
+          key={`${cellContextMenu.instanceKey}-${cellContextMenu.row}-${cellContextMenu.col}`}
           x={cellContextMenu.x}
           y={cellContextMenu.y}
           gridSize={gridSize}
-          onSelectValue={handleSelectValueFromContextMenu} // Now context-aware
-          onClose={handleCloseCellContextMenu}
+          onSelectValue={handleSelectValueFromMenu}
+          onClose={closeActualContextMenu}
           isFilteringEnabled={cellContextMenu.isFilteringActiveForMenu}
           validNumbersList={cellContextMenu.validNumbersForMenu}
           userPencilMarksForCell={userPencilMarks[`${cellContextMenu.row}-${cellContextMenu.col}`] || []}
           onToggleUserPencilMark={(value) => {
             if (cellContextMenu.row !== null && cellContextMenu.col !== null) {
-              toggleUserPencilMark(cellContextMenu.row, cellContextMenu.col, value);
+              toggleUserPencilMarkForMenu(cellContextMenu.row, cellContextMenu.col, value);
             }
           }}
-        // No new props needed for CellContextMenu itself regarding corner note logic directly,
-        // as App.jsx handles which function (setCellCornerMark or handleCellInputValue) gets called.
+          isCandidateModeActive={isCandidateModeActive}
+          selectedCellCandidates={candidateMarks[`${cellContextMenu.row}-${cellContextMenu.col}`] || []}
         />
       )}
     </div>

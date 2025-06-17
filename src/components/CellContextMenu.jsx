@@ -4,203 +4,122 @@ import { getDisplayValue } from '../logic/utils';
 import './CellContextMenu.css';
 
 function CellContextMenu({
-  x,
-  y,
-  gridSize,
-  onSelectValue,
-  onClose, // onClose is now App's handleCloseCellContextMenu
-  isFilteringEnabled, // NEW PROP: boolean, true if filtering is active for this menu instance
-  validNumbersList,   // NEW PROP: array of 0-indexed valid numbers, or null/undefined if not filtering or no valid numbers
-  userPencilMarksForCell, // Array of numbers user has right-clicked for *this* cell
-  onToggleUserPencilMark, // Function (value) => void, to call App's toggleUserPencilMark
+  x, y, gridSize,
+  onSelectValue, // App's handleSelectValueFromContextMenu
+  onClose,       // App's handleCloseCellContextMenu
+  isFilteringEnabled, validNumbersList,
+  userPencilMarksForCell,   // For strike-throughs in menu
+  onToggleUserPencilMark, // For strike-throughs in menu
+  isCandidateModeActive,      // boolean: Is the app in candidate entry mode?
+  selectedCellCandidates,   // array: Numbers already selected as candidates for this cell
 }) {
   const menuRef = useRef(null);
   const [isVisible, setIsVisible] = useState(false);
-  const [menuPosition, setMenuPosition] = useState({ top: 0, left: 0 });
-  const [transformOrigin, setTransformOrigin] = useState('center center');
-  const values = Array.from({ length: gridSize }, (_, i) => i); // 0-indexed values 0 to gridSize-1
+  const [menuPosition, setMenuPosition] = useState({ top: y, left: x });
+  const [transformOrigin, setTransformOrigin] = useState('0 0');
+  const values = Array.from({ length: gridSize }, (_, i) => i);
 
   useEffect(() => {
     if (menuRef.current) {
-      const menuRect = menuRef.current.getBoundingClientRect(); // Get actual menu dimensions
-      const menuWidth = menuRect.width;
-      const menuHeight = menuRect.height;
+      const menuRect = menuRef.current.getBoundingClientRect();
+      let finalX = x;
+      let finalY = y;
+      const margin = 10;
 
-      // --- Desired position from props (x, y) ---
-      // These are the `menuX` and `menuY` calculated in App.jsx's handleOpenOrMoveCellContextMenu
-      // which already include offsets like MENU_LEFT_OFFSET_X and MENU_OFFSET_Y.
-      // Let's call them `desiredX` and `desiredY` for clarity here.
-      let desiredX = x;
-      let desiredY = y;
-
-      let finalX = desiredX;
-      let finalY = desiredY;
-
-      // --- Viewport boundaries ---
-      const viewportWidth = window.innerWidth;
-      const viewportHeight = window.innerHeight;
-      const scrollX = window.scrollX; // Important if the page can scroll
-      const scrollY = window.scrollY;
-
-      // --- Margins/Paddings from screen edges ---
-      const margin = 15; // Minimum space from any edge
-
-      // --- Adjust Y position (vertical) ---
-      // If menu goes off bottom
-      if (desiredY + menuHeight > viewportHeight + scrollY - margin) {
-        finalY = viewportHeight + scrollY - menuHeight - margin;
+      if (x + menuRect.width > window.innerWidth - margin) {
+        finalX = window.innerWidth - menuRect.width - margin;
       }
-      // If menu goes off top
-      if (desiredY < scrollY + margin) {
-        finalY = scrollY + margin;
+      if (y + menuRect.height > window.innerHeight - margin) {
+        finalY = window.innerHeight - menuRect.height - margin;
       }
-      // Ensure finalY is at least scrollY + margin (handles cases where menu is taller than viewport)
-      finalY = Math.max(scrollY + margin, finalY);
-
-
-      // --- Adjust X position (horizontal) ---
-      // If menu goes off right
-      if (desiredX + menuWidth > viewportWidth + scrollX - margin) {
-        finalX = viewportWidth + scrollX - menuWidth - margin;
-      }
-      // If menu goes off left
-      if (desiredX < scrollX + margin) {
-        finalX = scrollX + margin;
-      }
-      // Ensure finalX is at least scrollX + margin (handles cases where menu is wider than viewport)
-      finalX = Math.max(scrollX + margin, finalX);
+      finalX = Math.max(margin + window.scrollX, finalX);
+      finalY = Math.max(margin + window.scrollY, finalY);
 
       setMenuPosition({ top: finalY, left: finalX });
-
-      // Calculate transform-origin based on the *original click point (props x, y)*
-      // relative to the *final menu position (finalX, finalY)*.
-      // The props x, y from App.jsx already account for scroll.
-      // The original x, y passed to this component are effectively the click point adjusted by initial offsets.
-      // So, we need to find where the original desiredX/Y (which is the click point + initial offset)
-      // ended up relative to the menu's actual top-left corner.
+      setTransformOrigin(`${x - finalX}px ${y - finalY}px`);
       
-      // The 'x' and 'y' props are already relative to the document (including scroll)
-      // because App.jsx calculates them using getBoundingClientRect() and window.scrollX/Y.
-      // So, the origin calculation becomes:
-      // originX_relative_to_menu = (click_point_x_on_document) - finalX_on_document
-      // originY_relative_to_menu = (click_point_y_on_document) - finalY_on_document
-
-      // The `x` and `y` props are the *intended* top-left of the menu.
-      // The click point would be `x - MENU_LEFT_OFFSET_X` and `y - (MENU_OFFSET_Y + MENU_APPROXIMATE_HEIGHT)`
-      // if we were to reverse App.jsx's calculation.
-      // Simpler: use the original `x` and `y` passed to *this component* as the "target point"
-      // for the animation origin, as these are what App.jsx calculated as the menu's anchor.
-
-      const originXForTransform = x - finalX;
-      const originYForTransform = y - finalY;
-      
-      setTransformOrigin(`${originXForTransform}px ${originYForTransform}px`);
-
-      const timer = setTimeout(() => setIsVisible(true), 10); // Make visible after position calculation
+      const timer = setTimeout(() => setIsVisible(true), 10);
       return () => clearTimeout(timer);
     }
-  }, [x, y]); // Rerun if initial desired x, y change (i.e., menu is opened for a new cell/position)
-
+  }, [x, y]);
 
   useEffect(() => {
-    // The global click listener in App.jsx now handles more complex "outside click" logic.
-    // This menu's own outside click should only handle Escape or very direct "off-menu" clicks
-    // that App.jsx might not easily catch as "not on a cell".
-
     const handleEscKey = (event) => {
       if (event.key === 'Escape') {
         setIsVisible(false);
-        setTimeout(onClose, 200); // Call App's close handler
+        setTimeout(onClose, 200); // App's onClose handles auto-population logic
       }
     };
-
-    // This mousedown listener on document is now primarily for clicks that are *not* on game cells
-    // or other interactive elements that App.jsx would handle.
-    // App.jsx's global listener will be more specific.
-    const handleClickTrulyOutside = (event) => {
-        if (menuRef.current && !menuRef.current.contains(event.target)) {
-            // This condition means the click was outside the menu itself.
-            // App.jsx's global mousedown listener will determine if this click
-            // should truly close the menu (e.g., click on body) or if it was on another cell
-            // (which App.jsx's handleCellClick would manage, potentially moving the menu).
-            // For safety, if this component's direct outside click fires,
-            // and App.jsx doesn't intervene to "move" it, it implies a general close.
-            // However, to avoid race conditions or double-closing, we can let App.jsx's
-            // global listener be the primary decider for "outside" clicks.
-            // This local one is now mainly for ESC.
-        }
-    };
-
-    // document.addEventListener('mousedown', handleClickTrulyOutside); // Temporarily disable direct outside click here
     document.addEventListener('keydown', handleEscKey);
     return () => {
-      // document.removeEventListener('mousedown', handleClickTrulyOutside);
       document.removeEventListener('keydown', handleEscKey);
     };
-  }, [onClose]); // onClose is App's handleCloseCellContextMenu
+  }, [onClose]);
 
-  const handleValueSelect = (val, isDisabled) => {
-    if (isDisabled) return;
-    setIsVisible(false);
-    setTimeout(() => onSelectValue(val), 180); // Shortened to allow quicker state update in App
+  const handleLeftClickValueButton = (valToSelect) => {
+    onSelectValue(valToSelect); // App's handler knows about candidate mode.
+                                // Menu does not close automatically if in candidate mode.
   };
 
-  // NEW: Handler for right-clicking a value button
-  const handleRightClickValue = (event, val) => {
-    event.preventDefault(); // Prevent native browser context menu
-    onToggleUserPencilMark(val); // Call the callback passed from App.jsx
-    // Do NOT close the menu or select the value for the grid
-  };
-
-  const menuStyle = {
-    position: 'fixed', // Fixed position is good for viewport-relative calculations
-    zIndex: 3000,
-    top: `${menuPosition.top}px`,
-    left: `${menuPosition.left}px`,
-    transformOrigin: transformOrigin,
+  const handleRightClickValueButton = (event, valToMark) => {
+    event.preventDefault();
+    onToggleUserPencilMark(valToMark); // Toggles strike-through in menu.
   };
 
   return (
     <div
       ref={menuRef}
-      style={menuStyle}
+      style={{
+        position: 'fixed',
+        zIndex: 3000,
+        top: `${menuPosition.top}px`,
+        left: `${menuPosition.left}px`,
+        transformOrigin: transformOrigin,
+      }}
       className={`cell-context-menu ${isVisible ? 'visible' : ''}`}
-      onContextMenu={(e) => e.preventDefault()} // Prevent context menu on the menu background
+      onContextMenu={(e) => e.preventDefault()} // Prevent context menu on the menu background itself
     >
       {values.map((val) => {
-        // Logic to skip rendering if filtering is on and number is invalid
         if (isFilteringEnabled) {
           if (!validNumbersList || !Array.isArray(validNumbersList) || !validNumbersList.includes(val)) {
-            return null;
+            return null; // Skip rendering if filtered out
           }
         }
 
-        // Check if this value is in the user's pencil marks for the current cell
         const isPencilMarkedDisabled = userPencilMarksForCell && userPencilMarksForCell.includes(val);
+        const isCurrentlySelectedAsCandidate = selectedCellCandidates && selectedCellCandidates.includes(val);
         
         let buttonClass = "context-menu-value-button glossy-button";
         if (isPencilMarkedDisabled) {
-          buttonClass += " user-pencil-mark-disabled"; // New class for styling
+          buttonClass += " user-pencil-mark-disabled";
+        }
+        // Apply 'candidate-selected' style if in candidate mode AND this value is a selected candidate
+        if (isCandidateModeActive && isCurrentlySelectedAsCandidate) {
+          buttonClass += " candidate-selected";
         }
 
         return (
           <button
             key={val}
             className={buttonClass}
-            onClick={(e) => { // Left click still selects the value
+            onClick={(e) => {
               e.stopPropagation();
-              // If you want to PREVENT selection if it's pencil-marked disabled:
-              // if (isPencilMarkedDisabled) return; 
-              if (isPencilMarkedDisabled) {
-                return; // Prevent selection
+              // Prevent setting main value if pencil-marked,
+              // but allow toggling as a candidate even if pencil-marked.
+              if (isPencilMarkedDisabled && !isCandidateModeActive) { 
+                return;
               }
-              handleValueSelect(val);
+              handleLeftClickValueButton(val);
             }}
-            onContextMenu={(e) => handleRightClickValue(e, val)} // NEW: Handle right-click
+            onContextMenu={(e) => handleRightClickValueButton(e, val)}
             title={
               isPencilMarkedDisabled
-                ? `Unmark ${getDisplayValue(val, gridSize)} as possibility (Right-click)`
-                : `Mark ${getDisplayValue(val, gridSize)} as NOT a possibility (Right-click)\nSet to ${getDisplayValue(val, gridSize)} (Left-click)`
+                ? `(Marked off) Right-click to unmark ${getDisplayValue(val, gridSize)}`
+                : isCandidateModeActive
+                  ? isCurrentlySelectedAsCandidate
+                    ? `Remove ${getDisplayValue(val, gridSize)} as candidate (Left-click)`
+                    : `Add ${getDisplayValue(val, gridSize)} as candidate (Left-click)`
+                  : `Set cell to ${getDisplayValue(val, gridSize)} (Left-click)`
             }
           >
             {getDisplayValue(val, gridSize)}

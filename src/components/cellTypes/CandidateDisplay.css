@@ -1,0 +1,124 @@
+/* src/components/cellTypes/CandidateDisplay.css */
+
+.cell .candidate-display-grid {
+  display: grid;
+  width: 95%;
+  height: 95%;
+  margin: auto;
+  gap: 0px; /* Minimal gap */
+  align-items: center;
+  justify-items: center;
+  box-sizing: border-box;
+  overflow: hidden; /* Prevent candidates from spilling if too many for layout */
+}
+
+/* Default candidate mark styling (smallest font, base color) */
+.cell .candidate-mark {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  color: #4a5568; /* A slightly muted dark gray/blue */
+  line-height: 1;
+  text-align: center;
+  opacity: 0.9;
+  font-weight: 600; /* Normal or slightly bold */
+  overflow: hidden;
+  text-overflow: clip;
+  white-space: nowrap;
+  width: 100%; /* Fill their grid cell */
+  height: 100%; /* Fill their grid cell */
+}
+
+/* --- Layouts based on candidate count --- */
+
+/* 1 Candidate (though main value usually shown, this is a fallback if `showCandidates` is true for 1) */
+/* Or could be used for a single, larger candidate display */
+.cell .candidate-display-grid.candidates-1 {
+  grid-template-columns: 1fr;
+  grid-template-rows: 1fr;
+}
+.cell .candidate-display-grid.candidates-1 .candidate-mark {
+  font-size: 1em; /* Larger for a single candidate */
+}
+
+/* 2 Candidates: 2 columns, 1 row */
+.cell .candidate-display-grid.candidates-2 {
+  grid-template-columns: repeat(2, 1fr);
+  grid-template-rows: 1fr;
+}
+.cell .candidate-display-grid.candidates-2 .candidate-mark {
+  font-size: 0.9em; /* Adjust relative to cell's main font-size prop */
+                    /* e.g., approx 38% of the main value font size */
+}
+
+/* 3 to 6 Candidates: Max 3 columns, up to 2 rows */
+/* (3 items = 3x1, 4 items = 2x2, 5 items = 3cols then 2cols, 6 items = 3x2) */
+/* Using CSS grid's auto-placement for this */
+.cell .candidate-display-grid.candidates-3to6 {
+  grid-template-columns: repeat(3, 1fr); /* Always 3 columns */
+  grid-auto-rows: minmax(0, 1fr); /* Let rows size automatically but be equal */
+  /* For 4 candidates, this 3-col layout will result in 3 on first row, 1 on second.
+     If you want 2x2 for 4 candidates, more complex logic or separate class is needed.
+     For now, this will be:
+     3 candidates: uses 1 row
+     4 candidates: uses 2 rows (3 on top, 1 on bottom-left)
+     5 candidates: uses 2 rows (3 on top, 2 on bottom-left/mid)
+     6 candidates: uses 2 rows (3 on top, 3 on bottom)
+  */
+}
+.cell .candidate-display-grid.candidates-3to6 .candidate-mark {
+  font-size: 0.65em; /* Smaller for more candidates */
+}
+
+/* If you specifically want 2x2 for 4 candidates:
+.cell .candidate-display-grid.candidates-4 {
+  grid-template-columns: repeat(2, 1fr);
+  grid-template-rows: repeat(2, 1fr);
+}
+.cell .candidate-display-grid.candidates-4 .candidate-mark {
+  font-size: 0.35em;
+}
+You'd need a `candidates-4` class in MorphingCell.jsx.
+*/
+
+
+/* 7 to 9 Candidates (for 9x9 Sudoku): 3 columns, 3 rows */
+.cell .candidate-display-grid.candidates-7plus {
+  grid-template-columns: repeat(3, 1fr);
+  grid-template-rows: repeat(3, 1fr); /* Explicitly 3 rows */
+}
+.cell .candidate-display-grid.candidates-7plus .candidate-mark {
+  font-size: 0.4em; /* Smallest font for max candidates */
+}
+
+
+/* --- Alternative Font Sizing using clamp (more directly responsive) --- */
+/* You can replace the .em based font-sizes above with these if you prefer.
+   These are independent of the parent cell's inline font-size style.
+   Adjust these clamp values based on testing.
+*/
+/*
+.cell .candidate-display-grid.candidates-1 .candidate-mark {
+  font-size: clamp(0.5rem, 2.5vmin, 0.9rem);
+}
+.cell .candidate-display-grid.candidates-2 .candidate-mark {
+  font-size: clamp(0.4rem, 2.2vmin, 0.75rem);
+}
+.cell .candidate-display-grid.candidates-3to6 .candidate-mark {
+  font-size: clamp(0.35rem, 2vmin, 0.65rem);
+}
+.cell .candidate-display-grid.candidates-7plus .candidate-mark {
+  font-size: clamp(0.3rem, 1.7vmin, 0.55rem);
+}
+*/
+
+/* For 16x16 grid, if you use a specific class on SudokuGrid like .grid-size-16 */
+/* This allows more candidates to fit if needed */
+.grid-size-16 .cell .candidate-display-grid.candidates-3to6,
+.grid-size-16 .cell .candidate-display-grid.candidates-7plus {
+  grid-template-columns: repeat(4, 1fr); /* Allow 4 columns for 16x16 candidates */
+}
+/* Adjust font size for 16x16 if necessary, could be smaller */
+.grid-size-16 .cell .candidate-display-grid.candidates-7plus .candidate-mark {
+   /* font-size: 0.25em; */ /* Example adjustment for 16x16 */
+}
